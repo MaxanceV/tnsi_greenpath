@@ -1,0 +1,16 @@
+# Python / Backend
+__pycache__/
+*.pyc
+.venv/
+env/
+greenpath.db
+
+# Angular / Frontend
+/frontend/node_modules/
+/frontend/dist/
+.angular/
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
