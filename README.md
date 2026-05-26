@@ -65,3 +65,9 @@ pip install -r requirements.txt
 
 Lancer le serveur FastAPI avec rechargement automatique
 uvicorn app.main:app --reload
+
+* Le backend sera en ligne sur http://localhost:8000. Vous pouvez accéder à la documentation interactive de l'API (Swagger) sur http://localhost:8000/docs.
+
+## Structure du projet
+* /frontend : Application Angular (Interfaces Responsable RSE et vue publique consommateur).
+* /backend : API FastAPI, calculs d'empreinte carbone (facteurs ADEME) et gestion de la base de données SQLite.
