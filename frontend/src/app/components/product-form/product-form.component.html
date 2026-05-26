@@ -1,0 +1,112 @@
+<div class="container">
+  <header class="page-header">
+    <h1>{{ productId !== null ? 'Modifier le produit' : 'Nouveau produit' }}</h1>
+    <a routerLink="/products" class="btn btn-secondary">← Retour</a>
+  </header>
+
+  <div *ngIf="loading" class="loading">Chargement...</div>
+
+  <form *ngIf="!loading" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <section class="card">
+      <h2>Informations produit</h2>
+
+      <label class="field">
+        <span>Nom du produit *</span>
+        <input type="text" formControlName="name" placeholder="Ex: T-shirt coton bio" />
+        <small class="error" *ngIf="hasError(form.get('name'), 'required')">Le nom est requis.</small>
+        <small class="error" *ngIf="hasError(form.get('name'), 'maxlength')">Maximum 120 caractères.</small>
+      </label>
+
+      <label class="field">
+        <span>Description</span>
+        <textarea formControlName="description" rows="2" placeholder="Description courte (optionnel)"></textarea>
+        <small class="error" *ngIf="hasError(form.get('description'), 'maxlength')">Maximum 500 caractères.</small>
+      </label>
+    </section>
+
+    <section class="card">
+      <div class="section-header">
+        <h2>Étapes de la supply chain</h2>
+        <button type="button" class="btn btn-primary" (click)="addStep()">+ Ajouter une étape</button>
+      </div>
+
+      <p *ngIf="steps.length === 0" class="empty">Aucune étape. Cliquez sur "Ajouter une étape".</p>
+
+      <div formArrayName="steps" class="steps-list">
+        <div
+          *ngFor="let stepCtrl of steps.controls; let i = index"
+          [formGroupName]="i"
+          class="step-card"
+        >
+          <div class="step-header">
+            <span class="step-badge">Étape {{ stepCtrl.get('position')?.value }}</span>
+            <div class="step-actions">
+              <button type="button" class="btn-icon" (click)="moveStep(i, -1)" [disabled]="i === 0" title="Monter">↑</button>
+              <button type="button" class="btn-icon" (click)="moveStep(i, 1)" [disabled]="i === steps.length - 1" title="Descendre">↓</button>
+              <button type="button" class="btn-icon btn-danger" (click)="removeStep(i)" title="Supprimer">✕</button>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <label class="field">
+              <span>Nom de l'étape *</span>
+              <input type="text" formControlName="name" placeholder="Ex: Culture du coton" />
+              <small class="error" *ngIf="hasError(stepCtrl.get('name'), 'required')">Requis.</small>
+            </label>
+
+            <label class="field">
+              <span>Type *</span>
+              <select formControlName="step_type">
+                <option *ngFor="let t of stepTypes" [value]="t">{{ stepTypeLabels[t] }}</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Fournisseur</span>
+              <input type="text" formControlName="supplier" placeholder="Ex: FarmIN" />
+            </label>
+
+            <label class="field">
+              <span>Lieu</span>
+              <input type="text" formControlName="location" placeholder="Ex: Inde" />
+            </label>
+
+            <label class="field">
+              <span>Poids (kg) *</span>
+              <input type="number" step="0.001" min="0" formControlName="weight_kg" placeholder="0.3" />
+              <small class="error" *ngIf="hasError(stepCtrl.get('weight_kg'), 'required')">Requis.</small>
+              <small class="error" *ngIf="hasError(stepCtrl.get('weight_kg'), 'min')">Doit être > 0.</small>
+            </label>
+
+            <label class="field">
+              <span>Mode de transport</span>
+              <select formControlName="transport_mode">
+                <option value="">— Aucun —</option>
+                <option *ngFor="let m of transportModes" [value]="m">{{ transportModeLabels[m] }}</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Distance (km)</span>
+              <input type="number" step="1" min="0" formControlName="distance_km" placeholder="Ex: 8000" />
+              <small class="error" *ngIf="hasError(stepCtrl.get('distance_km'), 'min')">Doit être ≥ 0.</small>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <small class="error" *ngIf="steps.errors?.['duplicatePositions']">
+        Les positions des étapes doivent être uniques.
+      </small>
+    </section>
+
+    <div *ngIf="serverError" class="server-error">{{ serverError }}</div>
+
+    <div class="form-actions">
+      <a routerLink="/products" class="btn btn-secondary">Annuler</a>
+      <button type="submit" class="btn btn-primary" [disabled]="submitting">
+        {{ submitting ? 'Enregistrement...' : (productId !== null ? 'Mettre à jour' : 'Créer le produit') }}
+      </button>
+    </div>
+  </form>
+</div>
