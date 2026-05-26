@@ -4,7 +4,7 @@
 
 ---
 
-## 👥 L'équipe
+## L'équipe
 * Abdrahamane Mbourou Camara
 * Baptiste Matrat
 * Ferdinand Martin-Lavigne
@@ -14,20 +14,20 @@
 
 ---
 
-## 🛠️ Stack Technique
+## Stack Technique
 * **Frontend :** Angular
 * **Backend :** Python (FastAPI)
 * **Base de données :** SQLite (Fichier local)
 
 ---
 
-## 🚀 Guide de démarrage
+## Guide de démarrage
 
 Pour faire tourner le projet localement sur votre machine, suivez les étapes ci-dessous après avoir cloné le dépôt.
 
 ### 1. Cloner le projet
-```bash
-git clone <URL_DE_TON_REPO>
+bash
+git clone https://github.com/MaxanceV/tnsi_greenpath
 cd greenpath
 
 ### 2. Initialiser et lancer le Frontend (Angular)
@@ -39,9 +39,7 @@ cd frontend
 Installer les packages nécessaires
 npm install
 
-Lancer le serveur de développement local
-npm start
-(ou "ng serve" si vous avez l'Angular CLI installé globalement)
+Lancer le serveur de développement local npm start (ou "ng serve" si vous avez l'Angular CLI installé globalement)
 
 Le frontend sera accessible sur http://localhost:4200
 
