@@ -30,42 +30,40 @@ Pour faire tourner le projet localement sur votre machine, suivez les étapes ci
 git clone <URL_DE_TON_REPO>
 cd greenpath
 
----
-
 ### 2. Initialiser et lancer le Frontend (Angular)
-* Le dossier contenant les modules d'Angular (node_modules) est ignoré par Git. Vous devez obligatoirement installer les dépendances avant de lancer le serveur.
+Le dossier contenant les modules d'Angular (node_modules) est ignoré par Git. Vous devez obligatoirement installer les dépendances avant de lancer le serveur.
 
-# Aller dans le dossier frontend
+Aller dans le dossier frontend
 cd frontend
 
-# Installer les packages nécessaires
+Installer les packages nécessaires
 npm install
 
-# Lancer le serveur de développement local
+Lancer le serveur de développement local
 npm start
-# (ou "ng serve" si vous avez l'Angular CLI installé globalement)
+(ou "ng serve" si vous avez l'Angular CLI installé globalement)
 
 Le frontend sera accessible sur http://localhost:4200
 
 ### 3. Initialiser et lancer le Backend (FastAPI)
 Il est fortement recommandé de créer un environnement virtuel Python pour isoler les dépendances du projet.
 
-# Revenir à la racine puis aller dans le backend
+Revenir à la racine puis aller dans le backend
 cd ../backend
 
-# Créer l'environnement virtuel (.venv)
+Créer l'environnement virtuel (.venv)
 python -m venv .venv
 
-# Activer l'environnement virtuel :
-# Sur Windows (Command Prompt) :
+Activer l'environnement virtuel :
+Sur Windows (Command Prompt) :
 .venv\Scripts\activate
-# Sur Windows (PowerShell) :
+Sur Windows (PowerShell) :
 .venv\Scripts\Activate.ps1
-# Sur Mac / Linux :
+Sur Mac / Linux :
 source .venv/bin/activate
 
-# Installer les dépendances Python
+Installer les dépendances Python
 pip install -r requirements.txt
 
-# Lancer le serveur FastAPI avec rechargement automatique
+Lancer le serveur FastAPI avec rechargement automatique
 uvicorn app.main:app --reload
