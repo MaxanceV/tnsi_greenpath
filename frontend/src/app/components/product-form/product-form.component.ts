@@ -32,6 +32,16 @@ const uniquePositionsValidator: ValidatorFn = (
   return dup ? { duplicatePositions: true } : null;
 };
 
+/**
+ * Formulaire de création / édition d'un produit et de ses étapes.
+ *
+ * - Mode création : route `/products/new`, démarre avec une étape vide.
+ * - Mode édition  : route `/products/:id/edit`, charge le produit existant.
+ *
+ * Le formulaire utilise un `FormArray` pour les étapes, ce qui permet
+ * d'ajouter/supprimer/réordonner dynamiquement. Un validateur custom
+ * garantit l'unicité des positions (cohérence avec le back).
+ */
 @Component({
   selector: 'app-product-form',
   standalone: true,

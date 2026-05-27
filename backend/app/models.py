@@ -1,9 +1,33 @@
+"""Modèles SQLAlchemy : tables User, Product, Step.
+
+Schéma (cf. diagramme Mermaid du README) :
+    User 1 --< Product 1 --< Step
+
+Règles de cascade :
+- Supprimer un Product supprime ses Steps (cascade="all, delete-orphan").
+- Supprimer un User met owner_id à NULL sur ses Products (ON DELETE SET NULL),
+  pour ne pas perdre les données historiques en cas de désactivation d'un compte.
+"""
+
 from datetime import datetime
 
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from .database import Base
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, nullable=False, unique=True, index=True)
+    password_hash = Column(String, nullable=False)
+    role = Column(String, nullable=False, default="entreprise")  # admin | entreprise
+    company_name = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    products = relationship("Product", back_populates="owner")
 
 
 class Product(Base):
@@ -13,7 +37,9 @@ class Product(Base):
     name = Column(String, nullable=False)
     description = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
 
+    owner = relationship("User", back_populates="products")
     steps = relationship(
         "Step",
         back_populates="product",
@@ -29,11 +55,11 @@ class Step(Base):
     product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
     position = Column(Integer, nullable=False)
     name = Column(String, nullable=False)
-    step_type = Column(String, nullable=False)  # matiere_premiere | fabrication | transport | distribution
+    step_type = Column(String, nullable=False)
     supplier = Column(String, nullable=True)
     location = Column(String, nullable=True)
     weight_kg = Column(Float, nullable=False)
-    transport_mode = Column(String, nullable=True)  # camion | bateau | avion | train | aucun
+    transport_mode = Column(String, nullable=True)
     distance_km = Column(Float, nullable=True)
 
     product = relationship("Product", back_populates="steps")

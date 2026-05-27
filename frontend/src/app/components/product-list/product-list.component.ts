@@ -3,6 +3,7 @@ import { Component, HostListener, OnInit, computed, inject, signal } from '@angu
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
+import { API_BASE_URL } from '../../config/api.config';
 import {
   Product,
   STEP_TYPE_LABELS,
@@ -10,6 +11,7 @@ import {
   TRANSPORT_MODE_LABELS,
   TransportMode,
 } from '../../models/product.model';
+import { AuthService } from '../../services/auth.service';
 import { ProductService } from '../../services/product.service';
 
 type SortKey = 'date_desc' | 'date_asc' | 'co2_desc' | 'co2_asc' | 'name_asc';
@@ -114,7 +116,10 @@ type SortKey = 'date_desc' | 'date_asc' | 'co2_desc' | 'co2_asc' | 'name_asc';
           <div class="info">
             <div class="name">{{ p.name }}</div>
             <div class="desc">{{ p.description || '—' }}</div>
-            <div class="meta">{{ p.steps.length }} étape(s)</div>
+            <div class="meta">
+              {{ p.steps.length }} étape(s)
+              <span *ngIf="isAdmin() && p.owner" class="owner-tag">· {{ p.owner.company_name }}</span>
+            </div>
           </div>
           <div class="co2">
             <div class="co2-value">{{ p.total_co2_kg | number:'1.0-2' }}</div>
@@ -122,6 +127,26 @@ type SortKey = 'date_desc' | 'date_asc' | 'co2_desc' | 'co2_asc' | 'name_asc';
           </div>
           <div class="actions">
             <button type="button" class="btn btn-view" (click)="view(p)">Visualiser</button>
+            <button type="button" class="btn btn-qr" (click)="openQr(p)" title="QR code">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;">
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
+                <line x1="14" y1="14" x2="14" y2="17"></line>
+                <line x1="17" y1="14" x2="21" y2="14"></line>
+                <line x1="14" y1="20" x2="17" y2="20"></line>
+                <line x1="20" y1="17" x2="20" y2="21"></line>
+              </svg>
+              QR code
+            </button>
+            <a [href]="publicUrl(p.id)" target="_blank" rel="noopener" class="btn btn-public" title="Ouvrir la page publique dans un nouvel onglet">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+              Page publique
+            </a>
             <a [routerLink]="['/products', p.id, 'edit']" class="btn btn-secondary">Modifier</a>
             <button type="button" class="btn btn-danger" (click)="remove(p)">Supprimer</button>
           </div>
@@ -291,8 +316,56 @@ type SortKey = 'date_desc' | 'date_asc' | 'co2_desc' | 'co2_asc' | 'name_asc';
         </div>
 
         <footer class="modal-footer">
+          <button type="button" class="btn btn-qr" (click)="openQr(selectedProduct)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+              <line x1="14" y1="14" x2="14" y2="17"></line>
+              <line x1="17" y1="14" x2="21" y2="14"></line>
+              <line x1="14" y1="20" x2="17" y2="20"></line>
+              <line x1="20" y1="17" x2="20" y2="21"></line>
+            </svg>
+            QR code
+          </button>
+          <a [href]="publicUrl(selectedProduct.id)" target="_blank" rel="noopener" class="btn btn-public">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <line x1="10" y1="14" x2="21" y2="3"></line>
+            </svg>
+            Voir page publique
+          </a>
           <a [routerLink]="['/products', selectedProduct.id, 'edit']" class="btn btn-secondary" (click)="closeModal()">Modifier</a>
           <button type="button" class="btn btn-primary" (click)="closeModal()">Fermer</button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- Modale QR Code -->
+    <div *ngIf="qrProduct() as qrP" class="modal-backdrop" (click)="closeQr()">
+      <div class="modal modal-qr" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <header class="modal-header">
+          <h2>QR code — {{ qrP.name }}</h2>
+          <button type="button" class="btn-close" (click)="closeQr()" aria-label="Fermer">✕</button>
+        </header>
+
+        <div class="modal-body qr-body">
+          <img [src]="qrImageUrl(qrP.id)" alt="QR code" class="qr-image" />
+          <p class="qr-help">Scannez ce code pour accéder à la page produit.</p>
+          <div class="qr-url-block">
+            <span class="qr-url-label">URL stable</span>
+            <code class="qr-url">{{ publicUrl(qrP.id) }}</code>
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="copyUrl(qrP.id)">
+            {{ urlCopied() ? '✓ Copié' : 'Copier l\\'URL' }}
+          </button>
+          <button type="button" class="btn btn-primary" (click)="downloadQr(qrP)">
+            Télécharger le PNG
+          </button>
         </footer>
       </div>
     </div>
@@ -378,6 +451,7 @@ type SortKey = 'date_desc' | 'date_asc' | 'co2_desc' | 'co2_asc' | 'name_asc';
       .name { font-weight: 600; font-size: 1.05rem; }
       .desc { color: #4b5563; font-size: 0.9rem; }
       .meta { color: #6b7280; font-size: 0.8rem; margin-top: 4px; }
+      .owner-tag { color: #065f46; font-weight: 500; }
       .co2 { text-align: right; min-width: 90px; }
       .co2-value { font-weight: 700; font-size: 1.2rem; color: #0f5132; }
       .co2-unit { font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; }
@@ -390,12 +464,45 @@ type SortKey = 'date_desc' | 'date_asc' | 'co2_desc' | 'co2_asc' | 'name_asc';
       .btn-secondary:hover:not(:disabled) { background: #d1d5db; }
       .btn-view { background: #dbeafe; color: #1e40af; }
       .btn-view:hover { background: #bfdbfe; }
+      .btn-public { background: #d1fae5; color: #065f46; display: inline-flex; align-items: center; }
+      .btn-public:hover { background: #a7f3d0; }
+      .btn-qr { background: #f3f4f6; color: #1f2937; display: inline-flex; align-items: center; border: 1px solid #e5e7eb; }
+      .btn-qr:hover { background: #e5e7eb; }
       .btn-danger { background: #fee2e2; color: #991b1b; }
       .btn-danger:hover { background: #fecaca; }
 
       .modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; animation: fade 0.15s ease-out; }
       .modal { background: white; border-radius: 10px; max-width: 760px; width: 100%; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25); animation: pop 0.15s ease-out; }
       .modal-filters { max-width: 560px; }
+      .modal-qr { max-width: 420px; }
+      .qr-body { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+      .qr-image {
+        width: 240px; height: 240px;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 12px;
+        background: white;
+      }
+      .qr-help { margin: 0; color: #6b7280; font-size: 0.9rem; }
+      .qr-url-block {
+        width: 100%;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 10px 12px;
+        text-align: left;
+      }
+      .qr-url-label {
+        font-size: 0.72rem; color: #6b7280;
+        text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;
+        display: block; margin-bottom: 4px;
+      }
+      .qr-url {
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 0.82rem;
+        color: #0f5132;
+        word-break: break-all;
+      }
       @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
       @keyframes pop { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
       .modal-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 18px 22px; border-bottom: 1px solid #e5e7eb; gap: 16px; }
@@ -454,8 +561,26 @@ type SortKey = 'date_desc' | 'date_asc' | 'co2_desc' | 'co2_asc' | 'name_asc';
     `,
   ],
 })
+/**
+ * Dashboard RSE — liste des produits visibles par l'utilisateur, KPIs,
+ * filtres, modale de détail et génération de QR code.
+ *
+ * Volontairement gardé monolithique pour l'MVP : l'état est porté par des
+ * signals colocalisés, ce qui évite la complexité d'un store. Les sections
+ * principales sont regroupées par rôle :
+ *   1. Données (signals : products, selectedProduct, qrProduct…)
+ *   2. Filtres (signals : searchTerm, stepTypeFilter…, computed filtered)
+ *   3. KPIs   (computed sur filteredProducts)
+ *   4. Actions UI (open/close des modales, copy URL, download QR, etc.)
+ *
+ * Évolution future : si l'on ajoute pagination, sélection multiple, ou
+ * actions en masse, il sera temps de scinder en sous-composants
+ * (DashboardKpisComponent, ProductFiltersComponent, ProductDetailModal…).
+ */
 export class ProductListComponent implements OnInit {
   private readonly productService = inject(ProductService);
+  private readonly auth = inject(AuthService);
+  readonly isAdmin = this.auth.isAdmin;
   readonly stepTypeLabels = STEP_TYPE_LABELS;
   readonly transportModeLabels = TRANSPORT_MODE_LABELS;
   readonly stepTypes = Object.keys(STEP_TYPE_LABELS) as StepType[];
@@ -474,6 +599,8 @@ export class ProductListComponent implements OnInit {
   readonly products = signal<Product[]>([]);
   loading = false;
   selectedProduct: Product | null = null;
+  readonly qrProduct = signal<Product | null>(null);
+  readonly urlCopied = signal<boolean>(false);
 
   readonly searchTerm = signal<string>('');
   readonly stepTypeFilter = signal<string>('');
@@ -634,7 +761,8 @@ export class ProductListComponent implements OnInit {
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
-    if (this.selectedProduct) this.closeModal();
+    if (this.qrProduct()) this.closeQr();
+    else if (this.selectedProduct) this.closeModal();
     else if (this.showFilters()) this.closeFilters();
   }
 
@@ -652,5 +780,46 @@ export class ProductListComponent implements OnInit {
 
   colorFor(index: number): string {
     return this.palette[index % this.palette.length];
+  }
+
+  publicUrl(id: number): string {
+    return `${window.location.origin}/p/${id}`;
+  }
+
+  qrImageUrl(id: number): string {
+    return `${API_BASE_URL}/public/products/${id}/qrcode`;
+  }
+
+  openQr(product: Product): void {
+    this.urlCopied.set(false);
+    this.qrProduct.set(product);
+  }
+
+  closeQr(): void {
+    this.qrProduct.set(null);
+  }
+
+  copyUrl(id: number): void {
+    const url = this.publicUrl(id);
+    navigator.clipboard.writeText(url).then(() => {
+      this.urlCopied.set(true);
+      setTimeout(() => this.urlCopied.set(false), 2000);
+    });
+  }
+
+  downloadQr(product: Product): void {
+    fetch(this.qrImageUrl(product.id))
+      .then((res) => res.blob())
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const safeName = product.name.replace(/[^a-z0-9-]+/gi, '-').toLowerCase();
+        a.download = `qr-greenpath-${safeName}-${product.id}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
   }
 }

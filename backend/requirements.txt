@@ -1,5 +1,9 @@
 fastapi
 uvicorn
 sqlalchemy
-qrcode
+qrcode[pil]
 pydantic
+passlib[bcrypt]
+bcrypt<4.1
+pyjwt
+email-validator

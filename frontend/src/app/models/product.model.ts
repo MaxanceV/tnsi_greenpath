@@ -35,6 +35,11 @@ export interface Step {
   co2_kg?: number;
 }
 
+export interface ProductOwner {
+  id: number;
+  company_name: string;
+}
+
 export interface Product {
   id: number;
   name: string;
@@ -42,6 +47,7 @@ export interface Product {
   created_at: string;
   steps: Step[];
   total_co2_kg?: number;
+  owner?: ProductOwner | null;
 }
 
 export interface DashboardStats {
