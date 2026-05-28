@@ -24,7 +24,7 @@ import { UserService } from '../../services/user.service';
       <header class="page-header">
         <div>
           <h1>Gestion des utilisateurs</h1>
-          <p class="subtitle">Créer, modifier et supprimer les comptes entreprise et admin</p>
+          <p class="subtitle">Créer, modifier et supprimer les comptes administrateurs, entreprises et consommateurs.</p>
         </div>
         <button type="button" class="btn btn-primary" (click)="openCreate()">+ Nouvel utilisateur</button>
       </header>
@@ -35,7 +35,7 @@ import { UserService } from '../../services/user.service';
         <thead>
           <tr>
             <th>Email</th>
-            <th>Entreprise</th>
+            <th>Nom / Entreprise</th>
             <th>Rôle</th>
             <th>Produits</th>
             <th>Créé le</th>
@@ -79,7 +79,7 @@ import { UserService } from '../../services/user.service';
           </label>
 
           <label class="field">
-            <span>Nom de l'entreprise *</span>
+            <span>{{ nameLabel() }} *</span>
             <input type="text" formControlName="company_name" />
           </label>
 
@@ -87,6 +87,7 @@ import { UserService } from '../../services/user.service';
             <span>Rôle *</span>
             <select formControlName="role">
               <option value="entreprise">Entreprise</option>
+              <option value="consommateur">Consommateur</option>
               <option value="admin">Super Admin</option>
             </select>
           </label>
@@ -216,6 +217,12 @@ export class AdminUsersComponent implements OnInit {
 
   roleLabel(role: string): string {
     return ROLE_LABELS[role as UserRole] ?? role;
+  }
+
+  /** Libellé du champ "nom" qui s'adapte au rôle sélectionné dans le form. */
+  nameLabel(): string {
+    const role = this.form.get('role')?.value;
+    return role === 'consommateur' ? 'Nom complet' : "Nom de l'entreprise";
   }
 
   private fetch(): void {

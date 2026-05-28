@@ -57,7 +57,7 @@ type SortKey = 'date_desc' | 'date_asc' | 'co2_desc' | 'co2_asc' | 'name_asc';
           </svg>
           <input
             type="search"
-            placeholder="Rechercher un produit, fournisseur, lieu, étape..."
+            placeholder="Rechercher un produit, une entreprise, un fournisseur, un lieu..."
             [ngModel]="searchTerm()"
             (ngModelChange)="searchTerm.set($event)"
           />
@@ -261,6 +261,13 @@ type SortKey = 'date_desc' | 'date_asc' | 'co2_desc' | 'co2_asc' | 'name_asc';
             <p class="modal-meta">
               Créé le {{ selectedProduct.created_at | date:'dd/MM/yyyy à HH:mm' }} · {{ selectedProduct.steps.length }} étape(s)
             </p>
+            <div class="chain-badge" *ngIf="selectedProduct.chain_valid">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 12l2 2 4-4"></path>
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+              Traçabilité vérifiée
+            </div>
           </div>
           <button type="button" class="btn-close" (click)="closeModal()" aria-label="Fermer">✕</button>
         </header>
@@ -311,6 +318,11 @@ type SortKey = 'date_desc' | 'date_asc' | 'co2_desc' | 'co2_asc' | 'name_asc';
                 <ng-container *ngIf="s.transport_mode"><dt>Transport</dt><dd>{{ transportModeLabels[s.transport_mode] }}</dd></ng-container>
                 <ng-container *ngIf="s.distance_km !== null && s.distance_km !== undefined"><dt>Distance</dt><dd>{{ s.distance_km }} km</dd></ng-container>
               </dl>
+              <div class="step-hash" *ngIf="s.hash" (click)="copyHash(s.hash!)" [title]="'Cliquer pour copier — ' + s.hash">
+                <span class="hash-label">Hash</span>
+                <code class="hash-value">{{ s.hash.substring(0, 16) }}…{{ s.hash.substring(s.hash.length - 8) }}</code>
+                <span class="hash-hint">{{ copiedHash() === s.hash ? '✓ copié' : 'cliquer pour copier' }}</span>
+              </div>
             </li>
           </ol>
         </div>
@@ -557,6 +569,43 @@ type SortKey = 'date_desc' | 'date_asc' | 'co2_desc' | 'co2_asc' | 'name_asc';
       .step-grid { display: grid; grid-template-columns: auto 1fr; column-gap: 12px; row-gap: 4px; margin: 0; font-size: 0.9rem; }
       .step-grid dt { color: #6b7280; }
       .step-grid dd { margin: 0; color: #1f2937; }
+      .step-hash {
+        margin-top: 10px;
+        padding: 8px 10px;
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-size: 0.78rem;
+        transition: background 0.15s;
+      }
+      .step-hash:hover { background: #dcfce7; }
+      .hash-label {
+        background: #16a34a; color: white;
+        padding: 2px 8px; border-radius: 4px;
+        font-weight: 600; font-size: 0.7rem;
+        text-transform: uppercase; letter-spacing: 0.04em;
+      }
+      .hash-value {
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        color: #065f46;
+        flex: 1;
+        word-break: break-all;
+      }
+      .hash-hint { color: #6b7280; font-size: 0.72rem; font-style: italic; }
+
+      .chain-badge {
+        display: inline-flex; align-items: center; gap: 5px;
+        background: #d1fae5; color: #065f46;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 0.75rem; font-weight: 600;
+        margin-top: 8px;
+        border: 1px solid #a7f3d0;
+      }
       .modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid #e5e7eb; }
     `,
   ],
@@ -601,6 +650,7 @@ export class ProductListComponent implements OnInit {
   selectedProduct: Product | null = null;
   readonly qrProduct = signal<Product | null>(null);
   readonly urlCopied = signal<boolean>(false);
+  readonly copiedHash = signal<string | null>(null);
 
   readonly searchTerm = signal<string>('');
   readonly stepTypeFilter = signal<string>('');
@@ -654,6 +704,7 @@ export class ProductListComponent implements OnInit {
         const hay = [
           p.name,
           p.description ?? '',
+          p.owner?.company_name ?? '',
           ...p.steps.map((s) => s.name),
           ...p.steps.map((s) => s.supplier ?? ''),
           ...p.steps.map((s) => s.location ?? ''),
@@ -784,6 +835,13 @@ export class ProductListComponent implements OnInit {
 
   publicUrl(id: number): string {
     return `${window.location.origin}/p/${id}`;
+  }
+
+  copyHash(hash: string): void {
+    navigator.clipboard.writeText(hash).then(() => {
+      this.copiedHash.set(hash);
+      setTimeout(() => this.copiedHash.set(null), 2000);
+    });
   }
 
   qrImageUrl(id: number): string {

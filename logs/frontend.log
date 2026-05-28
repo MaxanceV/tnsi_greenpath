@@ -1,0 +1,29 @@
+
+> frontend@0.0.0 start
+> ng serve --host 0.0.0.0
+
+
+Warning: This is a simple server for use in testing or debugging Angular applications
+locally. It hasn't been reviewed for security issues.
+
+Binding this server to an open connection can result in compromising your application or
+computer. Using a different host than the one passed to the "--host" flag might result in
+websocket connection issues. You might need to use "--disable-host-check" if that's the
+case.
+    
+Component HMR has been enabled, see https://angular.dev/hmr for more info.
+❯ Building...
+✔ Building...
+Initial chunk files | Names         |  Raw size
+main.js             | main          | 326.80 kB | 
+polyfills.js        | polyfills     |  89.77 kB | 
+styles.css          | styles        |  95 bytes | 
+
+                    | Initial total | 416.67 kB
+
+Application bundle generation complete. [3.680 seconds]
+
+Watch mode enabled. Watching for file changes...
+NOTE: Raw file sizes do not reflect development server per-request transformations.
+  ➜  Local:   http://localhost:4200/
+  ➜  Network: http://172.17.63.205:4200/

@@ -13,13 +13,14 @@ import { AuthService } from './services/auth.service';
   template: `
     <nav *ngIf="auth.isAuthenticated() && !isPublicRoute()" class="navbar">
       <div class="nav-inner">
-        <a routerLink="/products" class="brand" aria-label="GreenPath">
+        <a [routerLink]="homeRoute()" class="brand" aria-label="GreenPath">
           <img src="/assets/logo.jpeg" alt="GreenPath" />
         </a>
 
         <div class="nav-links">
-          <a routerLink="/products" routerLinkActive="active">Produits</a>
+          <a *ngIf="!auth.isConsumer()" routerLink="/products" routerLinkActive="active">Produits</a>
           <a *ngIf="auth.isAdmin()" routerLink="/admin/users" routerLinkActive="active">Utilisateurs</a>
+          <a *ngIf="auth.isConsumer()" routerLink="/my-consumption" routerLinkActive="active">Ma consommation</a>
         </div>
 
         <div class="user-block" *ngIf="auth.currentUser() as user">
@@ -103,6 +104,11 @@ export class AppComponent {
 
   roleLabel(role: string): string {
     return ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? role;
+  }
+
+  /** Route "maison" du user connecté (selon son rôle). */
+  homeRoute(): string {
+    return this.auth.defaultRoute();
   }
 
   logout(): void {

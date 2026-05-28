@@ -18,7 +18,7 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 
 ALLOWED_STEP_TYPES = {"matiere_premiere", "fabrication", "transport", "distribution"}
 ALLOWED_TRANSPORT_MODES = {"camion", "bateau", "avion", "train", "aucun"}
-ALLOWED_ROLES = {"admin", "entreprise"}
+ALLOWED_ROLES = {"admin", "entreprise", "consommateur"}
 
 
 # ---------------------------------------------------------------- Step / Product
@@ -58,6 +58,8 @@ class StepRead(StepBase):
     id: int
     product_id: int
     co2_kg: float = 0.0
+    # Hash SHA-256 (chaîné) ancrant cette étape dans la pseudo-blockchain.
+    hash: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -106,6 +108,8 @@ class ProductRead(ProductBase):
     steps: List[StepRead] = []
     total_co2_kg: float = 0.0
     owner: Optional[OwnerInfo] = None
+    # True si la chaîne de hashes des étapes est intègre (recalcul OK).
+    chain_valid: bool = True
 
     model_config = {"from_attributes": True}
 
@@ -161,3 +165,48 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserRead
+
+
+class ConsumerRegister(BaseModel):
+    """Auto-inscription d'un consommateur (rôle hard-codé côté serveur)."""
+    email: EmailStr
+    password: str = Field(..., min_length=6, max_length=120)
+    company_name: str = Field(..., min_length=1, max_length=120)  # nom de la personne
+
+
+# ---------------------------------------------------------------- Consumption
+
+class ConsumptionCreate(BaseModel):
+    product_id: int
+    quantity: float = Field(default=1.0, gt=0)
+    notes: Optional[str] = Field(default=None, max_length=300)
+
+
+class ConsumptionProductInfo(BaseModel):
+    """Vue allégée du produit dans une consommation (sans toutes les étapes)."""
+    id: int
+    name: str
+    description: Optional[str] = None
+    total_co2_kg: float = 0.0
+    owner_name: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class ConsumptionRead(BaseModel):
+    id: int
+    quantity: float
+    notes: Optional[str] = None
+    consumed_at: datetime
+    product: ConsumptionProductInfo
+    # CO2 attribué à cette entrée (quantité × CO2 produit)
+    co2_kg: float
+
+    model_config = {"from_attributes": True}
+
+
+class ConsumptionStats(BaseModel):
+    item_count: int
+    unique_product_count: int
+    total_co2_kg: float
+    avg_co2_per_item: float

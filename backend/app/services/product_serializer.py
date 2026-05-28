@@ -9,11 +9,12 @@ Centraliser la conversion ORM → DTO ici garantit :
 """
 
 from .. import models, schemas
+from .blockchain import verify_chain
 from .co2 import co2_for_step, total_co2_for_product
 
 
 def step_to_read(step: models.Step) -> schemas.StepRead:
-    """Convertit une étape ORM en schéma de lecture (avec CO2 calculé)."""
+    """Convertit une étape ORM en schéma de lecture (avec CO2 et hash)."""
     return schemas.StepRead(
         id=step.id,
         product_id=step.product_id,
@@ -26,6 +27,7 @@ def step_to_read(step: models.Step) -> schemas.StepRead:
         transport_mode=step.transport_mode,
         distance_km=step.distance_km,
         co2_kg=co2_for_step(step),
+        hash=step.hash,
     )
 
 
@@ -43,6 +45,8 @@ def product_to_read(product: models.Product) -> schemas.ProductRead:
             company_name=product.owner.company_name,
         )
 
+    chain_valid = verify_chain(product.steps) if product.steps else True
+
     return schemas.ProductRead(
         id=product.id,
         name=product.name,
@@ -51,4 +55,5 @@ def product_to_read(product: models.Product) -> schemas.ProductRead:
         steps=[step_to_read(s) for s in product.steps],
         total_co2_kg=total_co2_for_product(product),
         owner=owner_info,
+        chain_valid=chain_valid,
     )

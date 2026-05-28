@@ -16,20 +16,46 @@ Architecture (cf. README) :
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from . import models
 from .database import SessionLocal, engine
-from .routers import auth, products, public, users
+from .routers import auth, consumption, products, public, users
 from .services.auth import hash_password
+from .services.blockchain import assign_hashes
 
+
+def _migrate_step_hash_column() -> None:
+    """Ajoute la colonne `steps.hash` si elle n'existe pas (idempotent).
+
+    Utile pour les utilisateurs qui ont déjà un `greenpath.db` créé avant
+    l'introduction du hash de traçabilité : on évite de leur demander de
+    supprimer leur DB. Ne fait rien si la colonne existe déjà.
+    """
+    with engine.connect() as conn:
+        cols = conn.execute(text("PRAGMA table_info(steps)")).fetchall()
+        col_names = {row[1] for row in cols}
+        if "hash" not in col_names:
+            conn.execute(text("ALTER TABLE steps ADD COLUMN hash VARCHAR"))
+            conn.commit()
+            print("[migration] Colonne steps.hash ajoutée.")
+
+
+_migrate_step_hash_column()
 models.Base.metadata.create_all(bind=engine)
 
 
-def _bootstrap_admin():
-    """Crée un admin par défaut si aucun utilisateur n'existe."""
+def _bootstrap_admin() -> None:
+    """Crée un admin par défaut si aucun compte admin n'existe.
+
+    Vérifie spécifiquement l'absence de rôle `admin` (pas l'absence totale
+    d'utilisateurs) — important si le seed a tourné avant uvicorn et a déjà
+    créé des comptes entreprise/consommateur sans admin.
+    """
     db = SessionLocal()
     try:
-        if db.query(models.User).count() == 0:
+        admin_exists = db.query(models.User).filter(models.User.role == "admin").first()
+        if not admin_exists:
             admin = models.User(
                 email="admin@greenpath.com",
                 password_hash=hash_password("admin123"),
@@ -43,7 +69,33 @@ def _bootstrap_admin():
         db.close()
 
 
+def _bootstrap_step_hashes() -> None:
+    """Calcule le hash de toutes les étapes n'en ayant pas (rétro-compat).
+
+    Pour chaque produit qui contient au moins une étape sans hash, on
+    recalcule la chaîne entière (les hashes étant chaînés). Idempotent :
+    si tous les hashes sont déjà présents, ne fait rien.
+    """
+    db = SessionLocal()
+    try:
+        products_to_fix = (
+            db.query(models.Product)
+            .join(models.Step)
+            .filter(models.Step.hash.is_(None))
+            .distinct()
+            .all()
+        )
+        for product in products_to_fix:
+            assign_hashes(product.steps)
+        if products_to_fix:
+            db.commit()
+            print(f"[bootstrap] Hashes calculés pour {len(products_to_fix)} produit(s).")
+    finally:
+        db.close()
+
+
 _bootstrap_admin()
+_bootstrap_step_hashes()
 
 app = FastAPI(title="GreenPath API")
 
@@ -60,6 +112,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(products.router)
+app.include_router(consumption.router)
 app.include_router(public.router)
 
 

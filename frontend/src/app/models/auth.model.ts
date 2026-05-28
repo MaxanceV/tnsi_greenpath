@@ -1,9 +1,16 @@
-export type UserRole = 'admin' | 'entreprise';
+export type UserRole = 'admin' | 'entreprise' | 'consommateur';
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Super Admin',
   entreprise: 'Entreprise',
+  consommateur: 'Consommateur',
 };
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  company_name: string;
+}
 
 export interface User {
   id: number;

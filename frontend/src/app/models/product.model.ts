@@ -33,6 +33,8 @@ export interface Step {
   transport_mode?: TransportMode | null;
   distance_km?: number | null;
   co2_kg?: number;
+  /** Hash SHA-256 chaîné de l'étape (cf. services/blockchain.py côté back) */
+  hash?: string | null;
 }
 
 export interface ProductOwner {
@@ -48,6 +50,8 @@ export interface Product {
   steps: Step[];
   total_co2_kg?: number;
   owner?: ProductOwner | null;
+  /** True si la chaîne de hashes est cohérente avec le contenu des étapes */
+  chain_valid?: boolean;
 }
 
 export interface DashboardStats {

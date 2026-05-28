@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 
 import { API_BASE_URL } from '../config/api.config';
-import { LoginRequest, TokenResponse, User } from '../models/auth.model';
+import { LoginRequest, RegisterRequest, TokenResponse, User } from '../models/auth.model';
 
 const TOKEN_KEY = 'greenpath_token';
 const USER_KEY = 'greenpath_user';
@@ -27,6 +27,13 @@ export class AuthService {
   readonly currentUser = this._currentUser.asReadonly();
   readonly isAuthenticated = computed(() => this._currentUser() !== null);
   readonly isAdmin = computed(() => this._currentUser()?.role === 'admin');
+  readonly isConsumer = computed(() => this._currentUser()?.role === 'consommateur');
+  readonly isCompany = computed(() => this._currentUser()?.role === 'entreprise');
+
+  /** Route par défaut où renvoyer un utilisateur après login, selon son rôle. */
+  defaultRoute(): string {
+    return this._currentUser()?.role === 'consommateur' ? '/my-consumption' : '/products';
+  }
 
   private loadStoredUser(): User | null {
     if (typeof window === 'undefined') return null;
@@ -46,12 +53,20 @@ export class AuthService {
 
   login(payload: LoginRequest): Observable<TokenResponse> {
     return this.http.post<TokenResponse>(`${this.baseUrl}/login`, payload).pipe(
-      tap((res) => {
-        localStorage.setItem(TOKEN_KEY, res.access_token);
-        localStorage.setItem(USER_KEY, JSON.stringify(res.user));
-        this._currentUser.set(res.user);
-      }),
+      tap((res) => this.persistSession(res)),
     );
+  }
+
+  register(payload: RegisterRequest): Observable<TokenResponse> {
+    return this.http.post<TokenResponse>(`${this.baseUrl}/register`, payload).pipe(
+      tap((res) => this.persistSession(res)),
+    );
+  }
+
+  private persistSession(res: TokenResponse): void {
+    localStorage.setItem(TOKEN_KEY, res.access_token);
+    localStorage.setItem(USER_KEY, JSON.stringify(res.user));
+    this._currentUser.set(res.user);
   }
 
   logout(): void {

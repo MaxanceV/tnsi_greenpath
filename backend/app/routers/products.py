@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..database import get_db
 from ..dependencies import get_current_user
+from ..services.blockchain import assign_hashes
 from ..services.co2 import total_co2_for_product
 from ..services.product_serializer import product_to_read
 
@@ -59,6 +60,8 @@ def create_product(
     for step in payload.steps:
         product.steps.append(models.Step(**step.model_dump()))
     db.add(product)
+    db.flush()  # affecte un ID aux étapes pour pouvoir calculer les hashes
+    assign_hashes(product.steps)
     db.commit()
     db.refresh(product)
     return product_to_read(product)
@@ -126,6 +129,8 @@ def update_product(
         db.flush()
         for step in payload.steps:
             product.steps.append(models.Step(**step.model_dump()))
+        db.flush()
+        assign_hashes(product.steps)
 
     db.commit()
     db.refresh(product)

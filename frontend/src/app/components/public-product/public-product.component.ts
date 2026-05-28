@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import {
   Product,
@@ -9,6 +9,8 @@ import {
   TRANSPORT_MODE_LABELS,
   TransportMode,
 } from '../../models/product.model';
+import { AuthService } from '../../services/auth.service';
+import { ConsumptionService } from '../../services/consumption.service';
 import { ProductService } from '../../services/product.service';
 
 /**
@@ -26,7 +28,7 @@ import { ProductService } from '../../services/product.service';
 @Component({
   selector: 'app-public-product',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   template: `
     <div class="public-page">
       <header class="public-header">
@@ -71,6 +73,32 @@ import { ProductService } from '../../services/product.service';
             </div>
           </section>
 
+          <section class="action-section" *ngIf="canTrack() || !auth.isAuthenticated()">
+            <div class="container">
+              <div class="action-card" *ngIf="canTrack()">
+                <div class="action-info">
+                  <strong>Suivre ce produit dans votre bilan carbone</strong>
+                  <span>Ajoutez-le à votre liste personnelle pour comparer avant d'acheter.</span>
+                </div>
+                <button type="button" class="btn-action" (click)="addToConsumption(p)" [disabled]="adding() || added()">
+                  <span *ngIf="!added()">{{ adding() ? 'Ajout...' : '+ Ajouter à ma consommation' }}</span>
+                  <span *ngIf="added()">✓ Ajouté à votre suivi</span>
+                </button>
+              </div>
+
+              <div class="action-card guest-card" *ngIf="!auth.isAuthenticated()">
+                <div class="action-info">
+                  <strong>Suivez votre empreinte carbone</strong>
+                  <span>Créez un compte gratuit pour ajouter ce produit à votre bilan personnel.</span>
+                </div>
+                <div class="action-buttons">
+                  <a [routerLink]="['/login']" [queryParams]="{ redirectTo: currentPath }" class="btn-action btn-action-secondary">Se connecter</a>
+                  <a [routerLink]="['/signup']" [queryParams]="{ redirectTo: currentPath }" class="btn-action">Créer un compte</a>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <section class="co2-section">
             <div class="container">
               <div class="co2-card">
@@ -80,12 +108,12 @@ import { ProductService } from '../../services/product.service';
               </div>
 
               <div class="trust-row">
-                <div class="trust-badge">
+                <div class="trust-badge" [class.trust-badge-bad]="!p.chain_valid">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M9 12l2 2 4-4"></path>
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                   </svg>
-                  Données vérifiées
+                  {{ p.chain_valid ? 'Traçabilité vérifiée' : 'Chaîne altérée' }}
                 </div>
                 <div class="trust-badge" *ngIf="p.owner">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -140,9 +168,39 @@ import { ProductService } from '../../services/product.service';
                         {{ percent(s.co2_kg ?? 0, p.total_co2_kg ?? 0) | number:'1.0-0' }}% du total
                       </span>
                     </div>
+
+                    <div class="step-hash" *ngIf="s.hash">
+                      <span class="hash-tag">SHA-256</span>
+                      <code class="hash-mono">{{ s.hash.substring(0, 12) }}…{{ s.hash.substring(s.hash.length - 6) }}</code>
+                    </div>
                   </div>
                 </li>
               </ol>
+
+              <section class="chain-section">
+                <h3>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -3px; margin-right: 6px;">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                  </svg>
+                  Chaîne d'ancrage cryptographique
+                </h3>
+                <p class="chain-intro">
+                  Chaque étape de ce produit est <strong>ancrée</strong> par un hash <code>SHA-256</code>
+                  qui inclut le hash de l'étape précédente. Toute modification d'une seule étape briserait
+                  tous les hashes suivants — c'est ce qui garantit l'intégrité de la traçabilité.
+                </p>
+
+                <ol class="chain-list">
+                  <li *ngFor="let s of p.steps; let i = index" class="chain-item">
+                    <span class="chain-num" [style.background]="colorFor(i)">{{ s.position }}</span>
+                    <div class="chain-text">
+                      <div class="chain-step-name">{{ s.name }}</div>
+                      <code class="chain-hash">{{ s.hash }}</code>
+                    </div>
+                  </li>
+                </ol>
+              </section>
             </div>
           </section>
 
@@ -165,7 +223,7 @@ import { ProductService } from '../../services/product.service';
         padding: 14px 0;
       }
       .header-inner {
-        max-width: 720px; margin: 0 auto;
+        max-width: 1080px; margin: 0 auto;
         padding: 0 20px;
         display: flex; align-items: center; justify-content: center;
       }
@@ -220,18 +278,70 @@ import { ProductService } from '../../services/product.service';
       .nf-footer-text { margin: 22px 0 0; color: #6b7280; font-size: 0.85rem; }
       .nf-footer-text strong { color: #065f46; }
 
-      .container { max-width: 720px; margin: 0 auto; padding: 0 20px; }
+      .container { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
 
+      /* ---------- Hero ---------- */
       .hero {
         background: linear-gradient(135deg, #065f46 0%, #10b981 100%);
         color: white;
-        padding: 44px 0 38px;
+        padding: 44px 0 60px;
       }
-      .hero-inner { max-width: 720px; margin: 0 auto; padding: 0 20px; text-align: center; }
+      .hero-inner { max-width: 1080px; margin: 0 auto; padding: 0 20px; text-align: center; }
       .brand-line { margin: 0 0 8px; opacity: 0.85; font-size: 0.92rem; letter-spacing: 0.02em; }
       .brand-line strong { font-weight: 600; }
       .product-name { margin: 0; font-size: 2rem; font-weight: 700; line-height: 1.2; }
-      .product-desc { margin: 12px auto 0; max-width: 540px; opacity: 0.95; font-size: 1rem; line-height: 1.5; }
+      .product-desc { margin: 12px auto 0; max-width: 620px; opacity: 0.95; font-size: 1rem; line-height: 1.5; }
+
+      /* ---------- Carte CO2 ---------- */
+      /* ---------- Bandeau d'action (consommateur) ---------- */
+      .action-section {
+        background: white;
+        border-bottom: 1px solid #e5e7eb;
+        padding: 18px 0;
+      }
+      .action-card {
+        max-width: 820px;
+        margin: 0 auto;
+        background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+        border: 1px solid #a7f3d0;
+        border-radius: 12px;
+        padding: 16px 22px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+      .guest-card {
+        background: linear-gradient(135deg, #f0fdfa, #dbeafe);
+        border-color: #bfdbfe;
+      }
+      .action-info { flex: 1; min-width: 220px; }
+      .action-info strong {
+        display: block; color: #065f46;
+        font-size: 1rem; margin-bottom: 2px;
+      }
+      .guest-card .action-info strong { color: #1e40af; }
+      .action-info span { color: #4b5563; font-size: 0.88rem; }
+      .action-buttons { display: flex; gap: 8px; }
+      .btn-action {
+        background: #10b981; color: white;
+        border: none; padding: 11px 18px;
+        border-radius: 8px;
+        font-size: 0.92rem; font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+        text-decoration: none;
+        white-space: nowrap;
+        transition: background 0.15s;
+      }
+      .btn-action:hover:not(:disabled) { background: #059669; }
+      .btn-action:disabled { background: #6ee7b7; cursor: default; }
+      .btn-action-secondary {
+        background: white; color: #1e40af;
+        border: 1px solid #bfdbfe;
+      }
+      .btn-action-secondary:hover { background: #eff6ff; }
 
       .co2-section { padding: 28px 0; }
       .co2-card {
@@ -240,9 +350,12 @@ import { ProductService } from '../../services/product.service';
         border-radius: 14px;
         padding: 26px;
         text-align: center;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);
+        box-shadow: 0 6px 24px rgba(16, 185, 129, 0.12);
         margin-top: -50px;
         position: relative;
+        max-width: 720px;
+        margin-left: auto;
+        margin-right: auto;
       }
       .co2-label {
         font-size: 0.78rem; color: #047857;
@@ -267,10 +380,14 @@ import { ProductService } from '../../services/product.service';
         font-size: 0.8rem; font-weight: 600;
         border: 1px solid #a7f3d0;
       }
+      .trust-badge-bad {
+        background: #fef3c7; color: #92400e; border-color: #fde68a;
+      }
 
+      /* ---------- Section parcours ---------- */
       .journey { padding: 16px 0 40px; }
       .journey h2 { margin: 0 0 6px; font-size: 1.5rem; color: #0f5132; }
-      .section-intro { margin: 0 0 24px; color: #6b7280; }
+      .section-intro { margin: 0 0 24px; color: #6b7280; max-width: 720px; }
 
       .timeline {
         list-style: none; padding: 0; margin: 0;
@@ -343,6 +460,95 @@ import { ProductService } from '../../services/product.service';
         color: #6b7280; font-size: 0.82rem;
       }
 
+      .step-hash {
+        margin-top: 10px;
+        padding: 6px 10px;
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.74rem;
+      }
+      .hash-tag {
+        background: #16a34a; color: white;
+        padding: 2px 7px; border-radius: 4px;
+        font-weight: 600; font-size: 0.66rem;
+        letter-spacing: 0.04em;
+      }
+      .hash-mono {
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        color: #065f46;
+        word-break: break-all;
+      }
+
+      .chain-section {
+        margin-top: 36px;
+        padding: 24px 26px;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-left: 4px solid #10b981;
+        border-radius: 12px;
+      }
+      .chain-section h3 {
+        margin: 0 0 12px;
+        font-size: 1.15rem;
+        color: #065f46;
+        display: flex; align-items: center;
+      }
+      .chain-intro {
+        margin: 0 0 18px;
+        color: #374151;
+        font-size: 0.95rem;
+        line-height: 1.55;
+      }
+      .chain-intro code {
+        background: #d1fae5;
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        color: #065f46;
+      }
+      .chain-list {
+        list-style: none;
+        padding: 0; margin: 0;
+        display: flex; flex-direction: column;
+        gap: 10px;
+      }
+      .chain-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 10px 12px;
+        background: #f9fafb;
+        border-radius: 8px;
+      }
+      .chain-num {
+        flex-shrink: 0;
+        width: 26px; height: 26px;
+        border-radius: 50%;
+        color: white; font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.82rem;
+      }
+      .chain-text {
+        flex: 1; min-width: 0;
+      }
+      .chain-step-name {
+        font-weight: 600;
+        color: #1f2937;
+        font-size: 0.92rem;
+        margin-bottom: 4px;
+      }
+      .chain-hash {
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 0.75rem;
+        color: #065f46;
+        word-break: break-all;
+        display: block;
+      }
+
       .public-footer {
         text-align: center;
         padding: 30px 20px 40px;
@@ -354,16 +560,67 @@ import { ProductService } from '../../services/product.service';
       .public-footer p { margin: 4px 0; }
       .public-footer .small { font-size: 0.78rem; opacity: 0.75; }
 
+      /* ============ Responsive ============ */
+
+      /* Très petits téléphones */
       @media (max-width: 480px) {
         .product-name { font-size: 1.5rem; }
         .co2-value { font-size: 2.4rem; }
+        .logo { height: 44px; }
+      }
+
+      /* Tablette : un peu plus d'espace */
+      @media (min-width: 720px) {
+        .hero { padding: 60px 0 78px; }
+        .product-name { font-size: 2.6rem; }
+        .product-desc { font-size: 1.1rem; }
+        .co2-value { font-size: 3.6rem; }
+        .co2-card { padding: 32px; }
+        .journey h2 { font-size: 1.7rem; }
+        .section-intro { font-size: 1.05rem; }
+      }
+
+      /* Desktop : timeline en 2 colonnes, logo plus grand */
+      @media (min-width: 960px) {
+        .logo { height: 64px; }
+        .hero { padding: 80px 0 96px; }
+        .product-name { font-size: 3.1rem; }
+        .co2-card {
+          padding: 38px 44px;
+          max-width: 820px;
+        }
+        .co2-value { font-size: 4rem; }
+        .co2-sub { font-size: 1rem; }
+        .trust-badge { font-size: 0.9rem; padding: 8px 16px; }
+        .journey { padding: 32px 0 56px; }
+        .timeline {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          column-gap: 18px;
+          row-gap: 18px;
+          /* Empêche les cartes de s'étirer à la hauteur de la plus grande */
+          align-items: start;
+        }
+        /* Le rail vertical n'a plus de sens en grille — on le masque */
+        .timeline::before { display: none; }
+        .step { padding-bottom: 0; }
+      }
+
+      /* Grand desktop */
+      @media (min-width: 1280px) {
+        .hero { padding: 96px 0 110px; }
+        .product-name { font-size: 3.4rem; }
+        .product-desc { font-size: 1.15rem; max-width: 720px; }
       }
     `,
   ],
 })
 export class PublicProductComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly productService = inject(ProductService);
+  private readonly consumptionService = inject(ConsumptionService);
+  readonly auth = inject(AuthService);
 
   readonly stepTypeLabels = STEP_TYPE_LABELS;
   readonly transportModeLabels = TRANSPORT_MODE_LABELS;
@@ -374,6 +631,35 @@ export class PublicProductComponent implements OnInit {
   readonly loading = signal<boolean>(true);
   readonly error = signal<string | null>(null);
   readonly requestedId = signal<string | null>(null);
+  readonly adding = signal<boolean>(false);
+  readonly added = signal<boolean>(false);
+
+  /** True si le user connecté est un consommateur (seul rôle qui ajoute
+   *  à son bilan personnel — admin et entreprise n'ont pas vocation à
+   *  tracker leur propre consommation). */
+  canTrack(): boolean {
+    return this.auth.currentUser()?.role === 'consommateur';
+  }
+
+  /** Chemin courant (utilisé pour rediriger après login/signup). */
+  get currentPath(): string {
+    return this.router.url;
+  }
+
+  addToConsumption(product: Product): void {
+    if (!product) return;
+    this.adding.set(true);
+    this.consumptionService.add({ product_id: product.id, quantity: 1 }).subscribe({
+      next: () => {
+        this.adding.set(false);
+        this.added.set(true);
+        setTimeout(() => this.added.set(false), 4000);
+      },
+      error: () => {
+        this.adding.set(false);
+      },
+    });
+  }
 
   ngOnInit(): void {
     const idParam = this.route.snapshot.paramMap.get('id');
