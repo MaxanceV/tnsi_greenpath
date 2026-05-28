@@ -5,6 +5,16 @@ __pycache__/
 env/
 greenpath.db
 
+# Secrets / config locale
+.env
+*.env.local
+
+# Vector store local (RAG)
+backend/chroma_db/
+
+# Logs
+logs/
+
 # Angular / Frontend
 /frontend/node_modules/
 /frontend/dist/

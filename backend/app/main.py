@@ -20,7 +20,7 @@ from sqlalchemy import text
 
 from . import models
 from .database import SessionLocal, engine
-from .routers import auth, consumption, products, public, users
+from .routers import auth, chat, consumption, products, public, users
 from .services.auth import hash_password
 from .services.blockchain import assign_hashes
 
@@ -113,7 +113,31 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(products.router)
 app.include_router(consumption.router)
+app.include_router(chat.router)
 app.include_router(public.router)
+
+
+@app.on_event("startup")
+def _index_rag_on_startup() -> None:
+    """Lance l'indexation RAG en arrière-plan au démarrage.
+
+    Skip si `DISABLE_RAG=1` (mode test).
+    """
+    import os as _os
+    if _os.getenv("DISABLE_RAG") == "1":
+        return
+
+    import threading
+
+    def _run() -> None:
+        try:
+            from .services.rag import get_rag
+            stats = get_rag().index_all()
+            print(f"[RAG] Indexation terminée : {stats}")
+        except Exception as e:
+            print(f"[RAG] Échec de l'indexation initiale : {e}")
+
+    threading.Thread(target=_run, daemon=True).start()
 
 
 @app.get("/")

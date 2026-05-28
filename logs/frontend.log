@@ -15,15 +15,15 @@ Component HMR has been enabled, see https://angular.dev/hmr for more info.
 ❯ Building...
 ✔ Building...
 Initial chunk files | Names         |  Raw size
-main.js             | main          | 326.80 kB | 
+main.js             | main          | 357.09 kB | 
 polyfills.js        | polyfills     |  89.77 kB | 
 styles.css          | styles        |  95 bytes | 
 
-                    | Initial total | 416.67 kB
+                    | Initial total | 446.96 kB
 
-Application bundle generation complete. [3.680 seconds]
+Application bundle generation complete. [2.634 seconds]
 
 Watch mode enabled. Watching for file changes...
 NOTE: Raw file sizes do not reflect development server per-request transformations.
   ➜  Local:   http://localhost:4200/
-  ➜  Network: http://172.17.63.205:4200/
+  ➜  Network: http://10.10.159.185:4200/

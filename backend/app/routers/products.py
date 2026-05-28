@@ -20,6 +20,29 @@ from ..services.blockchain import assign_hashes
 from ..services.co2 import total_co2_for_product
 from ..services.product_serializer import product_to_read
 
+
+def _reindex_product_safe(product: models.Product) -> None:
+    """Re-indexation RAG fire-and-forget : on n'échoue jamais le CRUD à cause du RAG."""
+    import os as _os
+    if _os.getenv("DISABLE_RAG") == "1":
+        return
+    try:
+        from ..services.rag import get_rag
+        get_rag().reindex_product(product)
+    except Exception as e:
+        print(f"[RAG] Réindexation échouée (non-bloquant) : {e}")
+
+
+def _remove_from_index_safe(product_id: int) -> None:
+    import os as _os
+    if _os.getenv("DISABLE_RAG") == "1":
+        return
+    try:
+        from ..services.rag import get_rag
+        get_rag().remove_product(product_id)
+    except Exception as e:
+        print(f"[RAG] Désindexation échouée (non-bloquant) : {e}")
+
 router = APIRouter(prefix="/products", tags=["products"])
 
 
@@ -64,6 +87,7 @@ def create_product(
     assign_hashes(product.steps)
     db.commit()
     db.refresh(product)
+    _reindex_product_safe(product)
     return product_to_read(product)
 
 
@@ -134,6 +158,7 @@ def update_product(
 
     db.commit()
     db.refresh(product)
+    _reindex_product_safe(product)
     return product_to_read(product)
 
 
@@ -148,6 +173,8 @@ def delete_product(
     if not product:
         raise HTTPException(status_code=404, detail="Produit introuvable")
     _ensure_access(product, user)
+    product_id = product.id
     db.delete(product)
     db.commit()
+    _remove_from_index_safe(product_id)
     return None

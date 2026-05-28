@@ -3,13 +3,14 @@ import { Component, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 
+import { ChatbotComponent } from './components/chatbot/chatbot.component';
 import { ROLE_LABELS } from './models/auth.model';
 import { AuthService } from './services/auth.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, ChatbotComponent],
   template: `
     <nav *ngIf="auth.isAuthenticated() && !isPublicRoute()" class="navbar">
       <div class="nav-inner">
@@ -34,6 +35,9 @@ import { AuthService } from './services/auth.service';
     </nav>
 
     <router-outlet />
+
+    <!-- Chatbot RAG : visible uniquement pour les comptes connectés, hors page publique -->
+    <app-chatbot *ngIf="auth.isAuthenticated() && !isPublicRoute()" />
   `,
   styles: [
     `

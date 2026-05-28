@@ -210,3 +210,27 @@ class ConsumptionStats(BaseModel):
     unique_product_count: int
     total_co2_kg: float
     avg_co2_per_item: float
+
+
+# ---------------------------------------------------------------- Chat / RAG
+
+class ChatMessage(BaseModel):
+    role: str  # "user" | "assistant"
+    content: str
+
+
+class ChatRequest(BaseModel):
+    question: str = Field(..., min_length=1, max_length=2000)
+    history: List[ChatMessage] = Field(default_factory=list)
+
+
+class ChatSource(BaseModel):
+    kind: str  # "product" | "step" | "knowledge"
+    title: str  # nom du produit ou source de la KB
+    snippet: str  # extrait court
+    distance: float = 0.0
+
+
+class ChatResponse(BaseModel):
+    answer: str
+    sources: List[ChatSource] = Field(default_factory=list)

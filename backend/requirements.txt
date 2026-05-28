@@ -7,3 +7,11 @@ passlib[bcrypt]
 bcrypt<4.1
 pyjwt
 email-validator
+# RAG : embeddings locaux + vector store + appels HF
+sentence-transformers
+chromadb
+requests
+python-dotenv
+# Tests
+pytest
+httpx

@@ -30,6 +30,7 @@
 | Auth | **JWT** (`pyjwt`) + **bcrypt** (`passlib`) | Standard pour SPA + hash de passwords sécurisé |
 | Blockchain (simulée) | Fonction `anchor()` → hash SHA-256 | Remplaçable par Hyperledger en V2 |
 | QR Code | `qrcode` (Python) | Un QR par produit |
+| **Chatbot RAG** | `sentence-transformers` + `ChromaDB` + HF Inference API | Retrieval sémantique local (gratuit) + LLM via Hugging Face |
 
 ---
 
@@ -106,6 +107,92 @@ Au tout premier démarrage du backend, si aucun utilisateur n'existe en base, un
 2. Le backend vérifie le hash bcrypt et renvoie un **JWT** signé (clé `HS256`, durée 24h) + les infos user.
 3. Le frontend stocke le token dans `localStorage` et l'envoie sur toutes les requêtes suivantes dans l'en-tête `Authorization: Bearer <token>` (via un intercepteur HTTP Angular).
 4. Si une requête renvoie `401`, l'intercepteur déconnecte l'utilisateur automatiquement.
+
+---
+
+## Chatbot RAG (GreenBot)
+
+GreenPath embarque un chatbot disponible une fois connecté (bulle verte en bas
+à droite). Il s'appuie sur un vrai pipeline **RAG** (Retrieval-Augmented
+Generation) avec embeddings sémantiques + LLM.
+
+### Architecture du RAG
+
+```
+┌──────────────────┐  embed   ┌──────────────┐
+│ Question user    │ ───────► │ sentence-    │
+│ (français)       │          │ transformers │ (modèle multilingue, local)
+└──────────────────┘          └──────┬───────┘
+                                     │ vecteur 384-dim
+                                     ▼
+┌──────────────────────────────────────────────────┐
+│ ChromaDB (vector store local, persistant)        │
+│  - Tous les produits + étapes (indexés au boot)  │
+│  - Knowledge base CO2 (knowledge/*.md)           │
+└──────────────────────┬───────────────────────────┘
+                       │ top-6 documents similaires
+                       │ (filtrés par rôle utilisateur)
+                       ▼
+┌──────────────────────────────────────────────────┐
+│ Prompt construit avec :                          │
+│  - Instructions système (rôle-spécifique)        │
+│  - Documents récupérés                           │
+│  - Historique conversation                       │
+│  - Question                                      │
+└──────────────────────┬───────────────────────────┘
+                       │ POST
+                       ▼
+┌──────────────────────────────────────────────────┐
+│ Hugging Face Inference API                       │
+│ Modèle : Mistral-7B-Instruct-v0.3 (défaut)       │
+└──────────────────────┬───────────────────────────┘
+                       │ réponse texte
+                       ▼
+            Affichage dans le widget + sources
+```
+
+### Configurer le token Hugging Face (5 min, gratuit)
+
+1. Créer un compte gratuit sur https://huggingface.co
+2. Aller sur https://huggingface.co/settings/tokens
+3. Cliquer **New token** → type **Read** → nommer **greenpath** → valider
+4. Copier la valeur du token (commence par `hf_...`)
+5. Côté projet :
+
+```bash
+cd backend
+cp .env.example .env
+# Éditer .env et coller le token sur la ligne HF_TOKEN=
+```
+
+6. Redémarrer le backend → le chatbot est prêt.
+
+> Sans token, le widget s'affiche mais répondra "Le chatbot n'est pas configuré". Le backend reste opérationnel pour tout le reste.
+
+### Quoi voir / dire au prof
+
+- Le pipeline est **complet** : embeddings sémantiques (pas du keyword matching), vector store, retrieval top-K avec filtres par rôle, LLM open-weights.
+- Les **filtres de retrieval** sont métier : un consommateur ne voit que les produits qu'il a scannés + la knowledge base ; une entreprise ne voit que ses propres produits.
+- L'**indexation est incrémentale** : créer/modifier/supprimer un produit met à jour Chroma automatiquement.
+- Les **sources** utilisées pour générer la réponse sont affichées sous chaque message → transparence sur ce que le LLM a utilisé pour répondre.
+- La **knowledge base** (`backend/knowledge/co2_facts.md`) contient des ordres de grandeur ADEME, comparaisons sectorielles et réglementations européennes — on peut y ajouter du contenu.
+
+### Exemples de questions à tester
+
+**En tant que Léa (consommateur)** :
+- "Quel est mon produit le plus émetteur ?"
+- "Compare les avocats et les pommes"
+- "Combien j'économise en achetant du chocolat noir au lieu de café ?"
+
+**En tant que Petite Marie Textile (entreprise)** :
+- "Quelle est l'étape la plus émettrice du T-shirt coton bio ?"
+- "Compare le T-shirt et le sweat coton bio"
+- "Que faire pour réduire l'empreinte de mes produits textiles ?"
+
+**En tant qu'admin** :
+- "Quel produit a la plus grande empreinte CO2 ?"
+- "Quelles entreprises utilisent le transport maritime ?"
+- "Donne-moi les ordres de grandeur ADEME pour l'électronique"
 
 ---
 
