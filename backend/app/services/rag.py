@@ -24,12 +24,6 @@ import threading
 from pathlib import Path
 from typing import Dict, List, Optional
 
-# IMPORTANT : ces env vars doivent être set AVANT l'import de transformers.
-# Le modèle d'embedding tourne en local (le fichier est déjà dans ~/.cache/huggingface).
-# On évite ainsi tout appel réseau qui peut planter avec HF_TOKEN défini.
-os.environ.setdefault("HF_HUB_OFFLINE", "1")
-os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
-
 import chromadb
 from chromadb.config import Settings
 from sentence_transformers import SentenceTransformer
@@ -72,13 +66,12 @@ class RAGService:
             self._initialized = True
             return
         print(f"[RAG] Chargement du modèle d'embedding ({EMBEDDING_MODEL})...")
-        # Tentative en mode normal d'abord (utilise le cache si dispo).
-        # En cas d'échec (réseau / quota / token restrictif), fallback offline.
-        # Force CPU pour éviter les soucis de mémoire MPS sur Mac M-series.
+        # Essaie en ligne d'abord (télécharge si absent du cache).
+        # En cas d'échec réseau, bascule en offline (utilise le cache existant).
         try:
             self.embedder = SentenceTransformer(EMBEDDING_MODEL, device="cpu")
         except Exception as e:
-            print(f"[RAG] Chargement online échoué ({e}). Bascule en mode offline...")
+            print(f"[RAG] Chargement échoué ({e}). Bascule en mode offline...")
             os.environ["HF_HUB_OFFLINE"] = "1"
             os.environ["TRANSFORMERS_OFFLINE"] = "1"
             self.embedder = SentenceTransformer(EMBEDDING_MODEL, device="cpu")
