@@ -2,7 +2,7 @@
 > frontend@0.0.0 start
 > ng serve --host 0.0.0.0
 
-
+[1m[33m
 Warning: This is a simple server for use in testing or debugging Angular applications
 locally. It hasn't been reviewed for security issues.
 
@@ -10,20 +10,22 @@ Binding this server to an open connection can result in compromising your applic
 computer. Using a different host than the one passed to the "--host" flag might result in
 websocket connection issues. You might need to use "--disable-host-check" if that's the
 case.
-    
-Component HMR has been enabled, see https://angular.dev/hmr for more info.
-❯ Building...
-✔ Building...
-Initial chunk files | Names         |  Raw size
-main.js             | main          | 357.09 kB | 
-polyfills.js        | polyfills     |  89.77 kB | 
-styles.css          | styles        |  95 bytes | 
+    [39m[22m
+[1m[33mComponent HMR has been enabled, see https://angular.dev/hmr for more info.[39m[22m
+[33m>[39m Building...
+[32m√[39m Building...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m        [2m | [22m [1mRaw size[22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m         [2m | [22m[36m357.30 kB[39m[2m | [22m
+[32mpolyfills.js[39m       [2m | [22m[2mpolyfills[22m    [2m | [22m [36m89.77 kB[39m[2m | [22m
+[32mstyles.css[39m         [2m | [22m[2mstyles[22m       [2m | [22m [36m95 bytes[39m[2m | [22m
 
-                    | Initial total | 446.96 kB
+[1m [22m                  [2m | [22m[1mInitial total[22m[2m | [22m[1m447.17 kB[22m
 
-Application bundle generation complete. [2.634 seconds]
+Application bundle generation complete. [5.685 seconds]
 
 Watch mode enabled. Watching for file changes...
 NOTE: Raw file sizes do not reflect development server per-request transformations.
-  ➜  Local:   http://localhost:4200/
-  ➜  Network: http://10.10.159.185:4200/
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m4200[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://172.30.128.1:[1m4200[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.10.40.152:[1m4200[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m

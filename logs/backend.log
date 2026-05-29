@@ -1,2 +1,2 @@
-[RAG] Chargement du modèle d'embedding (paraphrase-multilingual-MiniLM-L12-v2)...
-Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 5510.19it/s]
+[RAG] Chargement du mod�le d'embedding (paraphrase-multilingual-MiniLM-L12-v2)...
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|##########| 199/199 [00:00<00:00, 4879.35it/s]
