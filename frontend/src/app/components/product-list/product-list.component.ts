@@ -491,7 +491,7 @@ type SortKey = 'date_desc' | 'date_asc' | 'co2_desc' | 'co2_asc' | 'name_asc';
       .qr-image {
         width: 240px; height: 240px;
         border: 1px solid #e5e7eb;
-        border-radius: 10px;
+        border-radius: 0;
         padding: 12px;
         background: white;
       }
