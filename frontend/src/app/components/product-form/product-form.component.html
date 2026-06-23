@@ -7,6 +7,8 @@
   <div *ngIf="loading" class="loading">Chargement...</div>
 
   <form *ngIf="!loading" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+
+    <!-- ── Informations produit ─────────────────────────────────────────── -->
     <section class="card">
       <h2>Informations produit</h2>
 
@@ -24,6 +26,7 @@
       </label>
     </section>
 
+    <!-- ── Étapes ──────────────────────────────────────────────────────── -->
     <section class="card">
       <div class="section-header">
         <h2>Étapes de la supply chain</h2>
@@ -95,10 +98,31 @@
             <label class="field">
               <span>
                 Groupe parallèle
-                <span class="field-hint" title="Étapes avec le même numéro de groupe seront affichées côte à côte dans la timeline">ⓘ</span>
+                <span class="field-hint" title="Étapes avec le même numéro seront affichées côte à côte dans la timeline">ⓘ</span>
               </span>
               <input type="number" step="1" min="1" formControlName="parallel_group" placeholder="Ex: 1 (optionnel)" />
               <small class="field-help">Même numéro = étapes parallèles dans la timeline</small>
+            </label>
+
+            <!-- Produit source (upstream) ──────────────────────────────── -->
+            <label class="field grid-span-2">
+              <span>
+                Produit source
+                <span class="field-hint" title="Permet de lier cette étape à un autre produit GreenPath dont la matière est issue">ⓘ</span>
+              </span>
+              <select formControlName="upstream_product_id">
+                <option [ngValue]="null">— Aucun produit source —</option>
+                <option
+                  *ngFor="let p of allProducts"
+                  [ngValue]="p.id"
+                  [disabled]="p.id === productId"
+                >
+                  {{ p.name }}{{ p.id === productId ? ' (ce produit)' : '' }}
+                </option>
+              </select>
+              <small class="field-help">
+                Optionnel — indique que cette étape provient d'un autre produit tracé dans GreenPath
+              </small>
             </label>
           </div>
         </div>
@@ -118,4 +142,63 @@
       </button>
     </div>
   </form>
+
+  <!-- ── Contributeurs (mode édition uniquement) ──────────────────────── -->
+  <section class="card contributors-card" *ngIf="productId !== null && !loading">
+    <h2>Entreprises contributrices</h2>
+    <p class="contributors-desc">
+      Invitez une entreprise partenaire à renseigner des étapes de ce produit en son nom.
+      Elle devra avoir un compte GreenPath.
+    </p>
+
+    <!-- Liste des contributeurs actuels -->
+    <div class="contributors-list" *ngIf="contributors.length > 0">
+      <div class="contributor-row" *ngFor="let c of contributors">
+        <div class="contributor-info">
+          <span class="contributor-name">{{ c.company_name }}</span>
+          <span class="contributor-email">{{ c.email }}</span>
+          <span class="scope-badge" [class.scope-write]="c.scope === 'write'" [class.scope-read]="c.scope === 'read'">
+            {{ c.scope === 'write' ? 'Lecture + écriture' : 'Lecture seule' }}
+          </span>
+        </div>
+        <button type="button" class="btn-revoke" (click)="removeContributor(c.user_id)" title="Révoquer l'accès">
+          Révoquer
+        </button>
+      </div>
+    </div>
+    <p class="empty" *ngIf="contributors.length === 0">Aucun contributeur externe pour l'instant.</p>
+
+    <!-- Formulaire d'invitation -->
+    <div class="invite-form">
+      <h3>Inviter une entreprise</h3>
+      <div class="invite-row">
+        <label class="field">
+          <span>Email du compte GreenPath</span>
+          <input
+            type="email"
+            [(ngModel)]="contributorEmail"
+            [ngModelOptions]="{standalone: true}"
+            placeholder="partenaire@exemple.com"
+          />
+        </label>
+        <label class="field">
+          <span>Niveau d'accès</span>
+          <select [(ngModel)]="contributorScope" [ngModelOptions]="{standalone: true}">
+            <option value="write">Lecture + écriture</option>
+            <option value="read">Lecture seule</option>
+          </select>
+        </label>
+        <button
+          type="button"
+          class="btn btn-primary invite-btn"
+          (click)="addContributor()"
+          [disabled]="contributorLoading || !contributorEmail.trim()"
+        >
+          {{ contributorLoading ? '...' : 'Inviter' }}
+        </button>
+      </div>
+      <small class="error" *ngIf="contributorError">{{ contributorError }}</small>
+      <small class="success" *ngIf="contributorSuccess">✓ {{ contributorSuccess }}</small>
+    </div>
+  </section>
 </div>
