@@ -115,6 +115,9 @@ export class ProductFormComponent implements OnInit {
     weight_kg: number;
     transport_mode: TransportMode | null;
     distance_km: number | null;
+    parallel_group: number | null;
+    upstream_product_id: number | null;
+    upstream_batch_id: number | null;
   }>): FormGroup {
     return this.fb.group({
       position: [
@@ -131,6 +134,9 @@ export class ProductFormComponent implements OnInit {
       ],
       transport_mode: [values?.transport_mode ?? ''],
       distance_km: [values?.distance_km ?? null, [Validators.min(0)]],
+      parallel_group: [values?.parallel_group ?? null, [Validators.min(1)]],
+      upstream_product_id: [values?.upstream_product_id ?? null],
+      upstream_batch_id: [values?.upstream_batch_id ?? null],
     });
   }
 
@@ -187,6 +193,10 @@ export class ProductFormComponent implements OnInit {
         transport_mode: s.transport_mode || null,
         distance_km:
           s.distance_km === null || s.distance_km === '' ? null : Number(s.distance_km),
+        parallel_group:
+          s.parallel_group === null || s.parallel_group === '' ? null : Number(s.parallel_group),
+        upstream_product_id: s.upstream_product_id || null,
+        upstream_batch_id: s.upstream_batch_id || null,
       })),
     };
 

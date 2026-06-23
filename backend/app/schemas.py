@@ -9,6 +9,11 @@ Convention : pour chaque entité, on définit
 
 Toutes les validations métier (types autorisés, contraintes de longueur,
 unicité de positions, etc.) sont déclarées ici, jamais dans les routers.
+
+GS1 :
+- GTIN-14 : 14 chiffres validés par chiffre de contrôle.
+- GLN     : 13 chiffres validés par chiffre de contrôle.
+- SSCC    : 18 chiffres validés par chiffre de contrôle.
 """
 
 from datetime import datetime
@@ -16,9 +21,12 @@ from typing import List, Optional
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from .services.gs1 import validate_gln, validate_gtin, validate_sscc
+
 ALLOWED_STEP_TYPES = {"matiere_premiere", "fabrication", "transport", "distribution"}
 ALLOWED_TRANSPORT_MODES = {"camion", "bateau", "avion", "train", "aucun"}
 ALLOWED_ROLES = {"admin", "entreprise", "consommateur"}
+ALLOWED_CONTRIBUTOR_SCOPES = {"read", "write"}
 
 
 # ---------------------------------------------------------------- Step / Product
@@ -32,6 +40,11 @@ class StepBase(BaseModel):
     weight_kg: float = Field(..., gt=0)
     transport_mode: Optional[str] = None
     distance_km: Optional[float] = Field(default=None, ge=0)
+    # Parallélisme : étapes avec le même parallel_group sont affichées côte à côte
+    parallel_group: Optional[int] = Field(default=None, ge=1)
+    # Multi-entreprise : référence à un produit GreenPath amont
+    upstream_product_id: Optional[int] = Field(default=None)
+    upstream_batch_id: Optional[int] = Field(default=None)
 
     @field_validator("step_type")
     @classmethod
@@ -54,12 +67,24 @@ class StepCreate(StepBase):
     pass
 
 
+class ContributorInfo(BaseModel):
+    """Vue allégée du contributeur d'une étape."""
+    id: int
+    company_name: str
+
+    model_config = {"from_attributes": True}
+
+
 class StepRead(StepBase):
     id: int
     product_id: int
     co2_kg: float = 0.0
     # Hash SHA-256 (chaîné) ancrant cette étape dans la pseudo-blockchain.
     hash: Optional[str] = None
+    # Entreprise ayant saisi l'étape (None = owner du produit)
+    contributor: Optional[ContributorInfo] = None
+    # Nom du produit amont si upstream_product_id renseigné
+    upstream_product_name: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -67,6 +92,17 @@ class StepRead(StepBase):
 class ProductBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=120)
     description: Optional[str] = Field(default=None, max_length=500)
+    # GTIN-14 GS1 — optionnel, généré automatiquement si absent
+    gtin: Optional[str] = Field(default=None)
+
+    @field_validator("gtin")
+    @classmethod
+    def _check_gtin(cls, v: Optional[str]) -> Optional[str]:
+        if v is None or v == "":
+            return None
+        if not validate_gtin(v):
+            raise ValueError("GTIN invalide : doit être 14 chiffres avec chiffre de contrôle GS1 correct")
+        return v
 
 
 class ProductCreate(ProductBase):
@@ -110,6 +146,87 @@ class ProductRead(ProductBase):
     owner: Optional[OwnerInfo] = None
     # True si la chaîne de hashes des étapes est intègre (recalcul OK).
     chain_valid: bool = True
+    # Nombre de contributeurs externes ayant accès en écriture
+    contributor_count: int = 0
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------- Batch / Lot
+
+class BatchBase(BaseModel):
+    lot_number: str = Field(..., min_length=1, max_length=80)
+    sscc: Optional[str] = Field(default=None)
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    quantity: Optional[float] = Field(default=None, gt=0)
+    unit: Optional[str] = Field(default=None, max_length=20)
+    notes: Optional[str] = Field(default=None, max_length=500)
+
+    @field_validator("sscc")
+    @classmethod
+    def _check_sscc(cls, v: Optional[str]) -> Optional[str]:
+        if v is None or v == "":
+            return None
+        if not validate_sscc(v):
+            raise ValueError("SSCC invalide : doit être 18 chiffres avec chiffre de contrôle GS1 correct")
+        return v
+
+
+class BatchCreate(BatchBase):
+    product_id: int
+    # IDs des lots parents (matières premières utilisées pour ce lot)
+    parent_batch_ids: List[int] = Field(default_factory=list)
+
+
+class BatchUpdate(BatchBase):
+    parent_batch_ids: Optional[List[int]] = None
+
+
+class BatchParentInfo(BaseModel):
+    """Vue allégée d'un lot parent/enfant."""
+    id: int
+    lot_number: str
+    sscc: Optional[str] = None
+    product_id: int
+    product_name: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class BatchRead(BatchBase):
+    id: int
+    product_id: int
+    product_name: Optional[str] = None
+    created_at: datetime
+    parents: List[BatchParentInfo] = []
+    children: List[BatchParentInfo] = []
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------- ProductContributor
+
+class ContributorAdd(BaseModel):
+    """Payload pour ajouter un contributeur à un produit (par email)."""
+    user_email: EmailStr
+    scope: str = Field(default="write")
+
+    @field_validator("scope")
+    @classmethod
+    def _check_scope(cls, v: str) -> str:
+        if v not in ALLOWED_CONTRIBUTOR_SCOPES:
+            raise ValueError(f"scope invalide: {v}. Valeurs autorisées: {sorted(ALLOWED_CONTRIBUTOR_SCOPES)}")
+        return v
+
+
+class ContributorRead(BaseModel):
+    user_id: int
+    company_name: str
+    email: str
+    scope: str
+    granted_at: datetime
+    granted_by_name: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -120,12 +237,22 @@ class UserBase(BaseModel):
     email: EmailStr
     company_name: str = Field(..., min_length=1, max_length=120)
     role: str = Field(default="entreprise")
+    gln: Optional[str] = Field(default=None)
 
     @field_validator("role")
     @classmethod
     def _check_role(cls, v: str) -> str:
         if v not in ALLOWED_ROLES:
             raise ValueError(f"Rôle invalide: {v}. Valeurs autorisées: {sorted(ALLOWED_ROLES)}")
+        return v
+
+    @field_validator("gln")
+    @classmethod
+    def _check_gln(cls, v: Optional[str]) -> Optional[str]:
+        if v is None or v == "":
+            return None
+        if not validate_gln(v):
+            raise ValueError("GLN invalide : doit être 13 chiffres avec chiffre de contrôle GS1 correct")
         return v
 
 
@@ -137,6 +264,7 @@ class UserUpdate(BaseModel):
     company_name: Optional[str] = Field(default=None, min_length=1, max_length=120)
     role: Optional[str] = None
     password: Optional[str] = Field(default=None, min_length=6, max_length=120)
+    gln: Optional[str] = None
 
     @field_validator("role")
     @classmethod
@@ -145,6 +273,15 @@ class UserUpdate(BaseModel):
             return None
         if v not in ALLOWED_ROLES:
             raise ValueError(f"Rôle invalide: {v}")
+        return v
+
+    @field_validator("gln")
+    @classmethod
+    def _check_gln(cls, v: Optional[str]) -> Optional[str]:
+        if v is None or v == "":
+            return None
+        if not validate_gln(v):
+            raise ValueError("GLN invalide : doit être 13 chiffres avec chiffre de contrôle GS1 correct")
         return v
 
 
@@ -171,7 +308,7 @@ class ConsumerRegister(BaseModel):
     """Auto-inscription d'un consommateur (rôle hard-codé côté serveur)."""
     email: EmailStr
     password: str = Field(..., min_length=6, max_length=120)
-    company_name: str = Field(..., min_length=1, max_length=120)  # nom de la personne
+    company_name: str = Field(..., min_length=1, max_length=120)
 
 
 # ---------------------------------------------------------------- Consumption
@@ -183,7 +320,6 @@ class ConsumptionCreate(BaseModel):
 
 
 class ConsumptionProductInfo(BaseModel):
-    """Vue allégée du produit dans une consommation (sans toutes les étapes)."""
     id: int
     name: str
     description: Optional[str] = None
@@ -199,7 +335,6 @@ class ConsumptionRead(BaseModel):
     notes: Optional[str] = None
     consumed_at: datetime
     product: ConsumptionProductInfo
-    # CO2 attribué à cette entrée (quantité × CO2 produit)
     co2_kg: float
 
     model_config = {"from_attributes": True}
@@ -215,7 +350,7 @@ class ConsumptionStats(BaseModel):
 # ---------------------------------------------------------------- Chat / RAG
 
 class ChatMessage(BaseModel):
-    role: str  # "user" | "assistant"
+    role: str
     content: str
 
 
@@ -225,9 +360,9 @@ class ChatRequest(BaseModel):
 
 
 class ChatSource(BaseModel):
-    kind: str  # "product" | "step" | "knowledge"
-    title: str  # nom du produit ou source de la KB
-    snippet: str  # extrait court
+    kind: str
+    title: str
+    snippet: str
     distance: float = 0.0
 
 

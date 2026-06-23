@@ -10,11 +10,15 @@ Crée :
 - 11 utilisateurs `entreprise` (textile, alimentaire, électronique, cosmétique, etc.)
 - ~30 produits variés avec leurs étapes de supply chain réalistes
 - 2 utilisateurs `consommateur` (Léa et Tom) avec un panier rempli
+- Batches GS1 démo pour les confitures (lot de fraises + lot de confiture)
+- Exemple de produit avec étapes parallèles (chocolat praliné)
+- Exemple de relation contributeur (fournisseur sucre → confiture)
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime
 from typing import List, Optional
 
 from app import models
@@ -22,7 +26,10 @@ from app.database import SessionLocal, engine
 from app.services.auth import hash_password
 from app.services.blockchain import assign_hashes
 from app.services.co2 import total_co2_for_product
+from app.services.gs1 import generate_gln, generate_gtin, generate_sscc
 
+# Recrée le schéma complet depuis zéro (garantit que toutes les colonnes sont présentes)
+models.Base.metadata.drop_all(bind=engine)
 models.Base.metadata.create_all(bind=engine)
 
 
@@ -38,6 +45,7 @@ class DemoStep:
     location: Optional[str] = None
     transport_mode: Optional[str] = None
     distance_km: Optional[float] = None
+    parallel_group: Optional[int] = None
 
 
 @dataclass(frozen=True)
@@ -196,14 +204,18 @@ DEMO_PRODUCTS: List[DemoProduct] = [
     ),
     DemoProduct(
         "Tablette praliné amande",
-        "Tablette 100g, chocolat au lait fourré praliné amande.",
+        "Tablette 100g, chocolat au lait fourré praliné amande. Exemple d'étapes parallèles GreenPath.",
         "chocoprovence@demo.greenpath",
         [
-            DemoStep(1, "Cacao Ghana", "matiere_premiere", 0.04, "Cacao Ghana Coop", "Kumasi, Ghana"),
-            DemoStep(2, "Culture amandes", "matiere_premiere", 0.03, "Provence Amandes", "Aix, France"),
-            DemoStep(3, "Transport cacao maritime", "transport", 0.04, location="Ghana → Le Havre", transport_mode="bateau", distance_km=6500),
-            DemoStep(4, "Fabrication et fourrage", "fabrication", 0.1, "FabChoco", "Marseille, France"),
-            DemoStep(5, "Distribution magasins", "distribution", 0.1, transport_mode="camion", distance_km=500),
+            # Étapes parallèles (parallel_group=1) : approvisionnement cacao ET amandes en même temps
+            DemoStep(1, "Cacao Ghana", "matiere_premiere", 0.04, "Cacao Ghana Coop", "Kumasi, Ghana", parallel_group=1),
+            DemoStep(2, "Culture amandes Provence", "matiere_premiere", 0.03, "Provence Amandes", "Aix, France", parallel_group=1),
+            # Transport parallèle aussi (parallel_group=2)
+            DemoStep(3, "Transport cacao maritime", "transport", 0.04, location="Ghana → Le Havre", transport_mode="bateau", distance_km=6500, parallel_group=2),
+            DemoStep(4, "Transport amandes", "transport", 0.03, location="Aix → Marseille", transport_mode="camion", distance_km=30, parallel_group=2),
+            # Séquentiel ensuite
+            DemoStep(5, "Fabrication et fourrage", "fabrication", 0.1, "FabChoco", "Marseille, France"),
+            DemoStep(6, "Distribution magasins", "distribution", 0.1, transport_mode="camion", distance_km=500),
         ],
     ),
 
@@ -498,11 +510,94 @@ def _get_or_create_user(db, demo: DemoUser) -> models.User:
         company_name=demo.company_name,
     )
     db.add(user)
+    db.flush()
+    # Auto-génération du GLN GS1
+    if not user.gln:
+        user.gln = generate_gln(user.id)
     db.commit()
     db.refresh(user)
     role_tag = "" if demo.role == "entreprise" else f" ({demo.role})"
     print(f"  + Utilisateur : {demo.email}  →  {demo.company_name}{role_tag}")
     return user
+
+
+def _seed_demo_batches(db, users_by_email: dict, products_by_name: dict) -> None:
+    """Crée des lots GS1 démo pour illustrer la notion de batch et de traçabilité amont."""
+    # Lot de fraises (matière première)
+    fraises_product = products_by_name.get("Confiture fraises bio 250g")
+    if not fraises_product:
+        return
+
+    # Vérifier si déjà créé
+    existing = db.query(models.Batch).filter(models.Batch.product_id == fraises_product.id).first()
+    if existing:
+        print("  · Batches démo : déjà présents — skip.")
+        return
+
+    # Lot fraises (mai 2026)
+    lot_fraises = models.Batch(
+        lot_number="LOT-FRAISE-2026-05",
+        product_id=fraises_product.id,
+        start_date=datetime(2026, 5, 1),
+        end_date=datetime(2026, 5, 15),
+        quantity=500.0,
+        unit="kg",
+        notes="Fraises bio Lublin, calibre A, taux brix 8.5",
+    )
+    db.add(lot_fraises)
+    db.flush()
+    lot_fraises.sscc = generate_sscc(lot_fraises.id)
+
+    # Lot confiture (juin 2026) — fils du lot fraises
+    lot_confiture = models.Batch(
+        lot_number="LOT-CONF-2026-042",
+        product_id=fraises_product.id,
+        start_date=datetime(2026, 6, 1),
+        end_date=datetime(2026, 6, 10),
+        quantity=2000.0,
+        unit="unités",
+        notes="Pot 250g. GTIN encodé dans QR GS1 Digital Link.",
+    )
+    db.add(lot_confiture)
+    db.flush()
+    lot_confiture.sscc = generate_sscc(lot_confiture.id)
+    lot_confiture.parents.append(lot_fraises)
+
+    db.commit()
+    print(f"  + Batches GS1 : {lot_fraises.lot_number} (parent) → {lot_confiture.lot_number} (enfant)")
+
+
+def _seed_demo_contributor(db, users_by_email: dict, products_by_name: dict) -> None:
+    """Illustre l'accès multi-entreprise : BioBuzz donne accès à Vergers Provence
+    pour saisir les étapes de culture des fraises sur la confiture."""
+    product = products_by_name.get("Confiture fraises bio 250g")
+    contributor_user = users_by_email.get("vergers@demo.greenpath")
+    owner_user = users_by_email.get("biobuzz@demo.greenpath")
+
+    if not product or not contributor_user or not owner_user:
+        return
+
+    existing = (
+        db.query(models.ProductContributor)
+        .filter(
+            models.ProductContributor.product_id == product.id,
+            models.ProductContributor.user_id == contributor_user.id,
+        )
+        .first()
+    )
+    if existing:
+        print("  · Contributeur démo : déjà présent — skip.")
+        return
+
+    contrib = models.ProductContributor(
+        product_id=product.id,
+        user_id=contributor_user.id,
+        granted_by=owner_user.id,
+        scope="write",
+    )
+    db.add(contrib)
+    db.commit()
+    print(f"  + Contributeur : Vergers Provence → Confiture fraises bio 250g (scope: write)")
 
 
 def _get_or_create_product(db, demo: DemoProduct, owner: models.User) -> tuple[models.Product, bool]:
@@ -530,10 +625,14 @@ def _get_or_create_product(db, demo: DemoProduct, owner: models.User) -> tuple[m
                 weight_kg=step.weight_kg,
                 transport_mode=step.transport_mode,
                 distance_km=step.distance_km,
+                parallel_group=step.parallel_group,
             )
         )
     db.add(product)
     db.flush()
+    # Auto-génération GTIN si absent
+    if not product.gtin:
+        product.gtin = generate_gtin(product.id)
     assign_hashes(product.steps)
     db.commit()
     db.refresh(product)
@@ -588,12 +687,26 @@ def seed() -> None:
         skipped = len(DEMO_PRODUCTS) - created
         print(f"  → {created} produit(s) ajouté(s), {skipped} déjà présent(s).")
 
+        # Index produits par nom (utile pour les seeds suivants)
+        products_by_name = {
+            p.name: p
+            for p in db.query(models.Product).all()
+        }
+
         print()
         print("Consommation :")
         for cuser in [u for u in DEMO_USERS if u.role == "consommateur"]:
             consumer = users_by_email[cuser.email]
             entries = [c for c in DEMO_CONSUMPTIONS if c.consumer_email == cuser.email]
             _seed_consumptions_for(db, consumer, entries)
+
+        print()
+        print("Batches GS1 :")
+        _seed_demo_batches(db, users_by_email, products_by_name)
+
+        print()
+        print("Contributeurs multi-entreprise :")
+        _seed_demo_contributor(db, users_by_email, products_by_name)
 
         print()
         print("Terminé. Comptes démo disponibles (mot de passe : demo123) :")

@@ -91,6 +91,15 @@
               <input type="number" step="1" min="0" formControlName="distance_km" placeholder="Ex: 8000" />
               <small class="error" *ngIf="hasError(stepCtrl.get('distance_km'), 'min')">Doit être ≥ 0.</small>
             </label>
+
+            <label class="field">
+              <span>
+                Groupe parallèle
+                <span class="field-hint" title="Étapes avec le même numéro de groupe seront affichées côte à côte dans la timeline">ⓘ</span>
+              </span>
+              <input type="number" step="1" min="1" formControlName="parallel_group" placeholder="Ex: 1 (optionnel)" />
+              <small class="field-help">Même numéro = étapes parallèles dans la timeline</small>
+            </label>
           </div>
         </div>
       </div>
