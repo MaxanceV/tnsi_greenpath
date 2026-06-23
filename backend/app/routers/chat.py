@@ -19,13 +19,75 @@ from .. import models, schemas
 from ..database import get_db
 from ..dependencies import get_current_user
 from ..services import llm
+from ..services.co2 import co2_for_step, total_co2_for_product
 from ..services.rag import get_rag
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 
+def _get_visible_products(db: Session, user: models.User) -> List[models.Product]:
+    """Renvoie les produits accessibles à l'utilisateur selon son rôle."""
+    if user.role == "admin":
+        return db.query(models.Product).all()
+    if user.role == "entreprise":
+        return db.query(models.Product).filter_by(owner_id=user.id).all()
+    if user.role == "consommateur":
+        consumed_ids = [
+            c.product_id
+            for c in db.query(models.Consumption).filter_by(user_id=user.id).all()
+        ]
+        if not consumed_ids:
+            return []
+        return db.query(models.Product).filter(models.Product.id.in_(consumed_ids)).all()
+    return []
+
+
+def _build_rag_filter(
+    user: models.User,
+    products: List[models.Product],
+) -> tuple[Optional[int], Optional[List[int]]]:
+    """Calcule le filtre ChromaDB depuis le rôle et la liste de produits visibles.
+
+    Renvoie (owner_id_filter, product_ids_filter) — au plus un est non-None.
+    """
+    if user.role == "admin":
+        return None, None
+    if user.role == "entreprise":
+        return user.id, None
+    return None, [p.id for p in products]
+
+
+def _build_structured_context(products: List[models.Product]) -> str:
+    """Construit un classement CO₂ exact depuis la BDD, injecté avant le RAG.
+
+    Permet au LLM de répondre aux questions d'agrégation (max, tri, comparaison)
+    que la similarité sémantique de ChromaDB ne peut pas résoudre seule.
+    """
+    if not products:
+        return ""
+
+    ranked = sorted(
+        [(p, round(total_co2_for_product(p), 3)) for p in products],
+        key=lambda x: x[1],
+        reverse=True,
+    )
+
+    lines = ["=== Classement des produits par empreinte CO₂ (données réelles) ==="]
+    for rank, (product, total_co2) in enumerate(ranked, start=1):
+        owner = product.owner.company_name if product.owner else "Inconnu"
+        steps_co2 = ", ".join(
+            f"{s.name} ({round(co2_for_step(s), 3)} kg CO₂)"
+            for s in sorted(product.steps, key=lambda s: s.position)
+        ) or "aucune étape"
+        lines.append(
+            f"{rank}. {product.name} — {owner} — Total : {total_co2} kg CO₂"
+            f" | Étapes : {steps_co2}"
+        )
+    lines.append("=== Fin du classement ===")
+    return "\n".join(lines)
+
+
 def _system_instructions(role: str) -> str:
-    """Prompt système adapté au rôle de l'utilisateur."""
     base = (
         "Tu es GreenBot, l'assistant carbone de GreenPath. "
         "IMPORTANT : les sources fournies dans le contexte sont les DONNÉES RÉELLES "
@@ -57,29 +119,7 @@ def _system_instructions(role: str) -> str:
     )
 
 
-def _build_filter(db: Session, user: models.User) -> tuple[Optional[int], Optional[List[int]]]:
-    """Calcule le filtre de retrieval selon le rôle.
-
-    Renvoie un tuple (owner_id_filter, product_ids_filter). Au plus un des
-    deux est non-None.
-    - Admin : aucun filtre (tout est vu)
-    - Entreprise : limité à ses propres produits
-    - Consommateur : limité aux produits qu'il a déjà ajoutés à son suivi
-    """
-    if user.role == "admin":
-        return None, None
-    if user.role == "entreprise":
-        return user.id, None
-    if user.role == "consommateur":
-        product_ids = [
-            c.product_id
-            for c in db.query(models.Consumption).filter_by(user_id=user.id).all()
-        ]
-        return None, product_ids
-    return None, []
-
-
-def _format_context(retrieved: List[dict]) -> tuple[str, List[schemas.ChatSource]]:
+def _format_rag_results(retrieved: List[dict]) -> tuple[str, List[schemas.ChatSource]]:
     """Concatène les documents récupérés en bloc texte + liste de sources."""
     blocks = []
     sources: List[schemas.ChatSource] = []
@@ -124,19 +164,26 @@ def chat(
             ),
         )
 
+    visible_products = _get_visible_products(db, user)
+
     rag = get_rag()
-    owner_id_filter, product_ids_filter = _build_filter(db, user)
+    owner_id_filter, product_ids_filter = _build_rag_filter(user, visible_products)
     retrieved = rag.retrieve(
         payload.question,
         top_k=10,
         owner_id_filter=owner_id_filter,
         product_ids_filter=product_ids_filter,
     )
-    context_text, sources = _format_context(retrieved)
+    rag_context, sources = _format_rag_results(retrieved)
+
+    structured_context = _build_structured_context(visible_products)
+    full_context = (
+        f"{structured_context}\n\n{rag_context}" if structured_context else rag_context
+    )
 
     messages = llm.build_messages(
         system_instructions=_system_instructions(user.role),
-        retrieved_context=context_text,
+        retrieved_context=full_context,
         history=[m.model_dump() for m in payload.history],
         user_question=payload.question,
     )
