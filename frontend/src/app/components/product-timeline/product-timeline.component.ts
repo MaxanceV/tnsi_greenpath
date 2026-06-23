@@ -183,23 +183,6 @@ import {
       min-width: 200px;
     }
 
-    /* ======= Étiquette parallèle ======= */
-    .parallel-label {
-      margin-bottom: 6px;
-      text-align: center;
-    }
-
-    .parallel-badge {
-      background: #fef3c7;
-      color: #92400e;
-      border: 1px solid #fde68a;
-      padding: 2px 10px;
-      border-radius: 999px;
-      font-size: 0.72rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-    }
-
     /* ======= Cartes d'étapes ======= */
     .step-cards {
       display: flex;
