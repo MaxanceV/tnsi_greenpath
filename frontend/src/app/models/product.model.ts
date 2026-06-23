@@ -76,6 +76,16 @@ export interface Product {
   contributor_count?: number;
 }
 
+/** Entreprise tierce ayant accès à un produit */
+export interface Contributor {
+  user_id: number;
+  company_name: string;
+  email: string;
+  scope: string;
+  granted_at: string;
+  granted_by_name?: string | null;
+}
+
 export interface DashboardStats {
   product_count: number;
   step_count: number;

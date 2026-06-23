@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from '../config/api.config';
-import { DashboardStats, Product, ProductPayload } from '../models/product.model';
+import { Contributor, DashboardStats, Product, ProductPayload } from '../models/product.model';
 
 /**
  * Client HTTP de l'API produits.
@@ -44,5 +44,19 @@ export class ProductService {
 
   getPublic(id: number): Observable<Product> {
     return this.http.get<Product>(`${this.publicUrl}/${id}`);
+  }
+
+  // ── Contributeurs ────────────────────────────────────────────────────────
+
+  getContributors(productId: number): Observable<Contributor[]> {
+    return this.http.get<Contributor[]>(`${this.baseUrl}/${productId}/contributors`);
+  }
+
+  addContributor(productId: number, email: string, scope: string): Observable<Contributor> {
+    return this.http.post<Contributor>(`${this.baseUrl}/${productId}/contributors`, { user_email: email, scope });
+  }
+
+  removeContributor(productId: number, userId: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${productId}/contributors/${userId}`);
   }
 }
