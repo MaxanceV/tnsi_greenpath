@@ -215,3 +215,141 @@
   gap: 12px;
   margin-top: 20px;
 }
+
+.field-hint {
+  cursor: help;
+  color: #9ca3af;
+  font-size: 0.8rem;
+}
+
+.field-help {
+  color: #6b7280;
+  font-size: 0.78rem;
+  margin-top: 2px;
+}
+
+.grid-span-2 {
+  grid-column: span 2;
+}
+
+@media (max-width: 640px) {
+  .grid-span-2 { grid-column: span 1; }
+}
+
+/* ── Contributeurs ──────────────────────────────────────────────────────── */
+
+.contributors-card {
+  margin-top: 0;
+}
+
+.contributors-desc {
+  color: #6b7280;
+  font-size: 0.88rem;
+  margin: -8px 0 16px;
+}
+
+.contributors-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.contributor-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 10px 14px;
+  gap: 12px;
+}
+
+.contributor-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.contributor-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #1f2937;
+}
+
+.contributor-email {
+  font-size: 0.82rem;
+  color: #6b7280;
+}
+
+.scope-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.scope-write {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.scope-read {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.btn-revoke {
+  background: none;
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn-revoke:hover {
+  background: #fee2e2;
+}
+
+.invite-form {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 16px;
+}
+
+.invite-form h3 {
+  font-size: 0.95rem;
+  color: #374151;
+  margin: 0 0 12px;
+  font-weight: 600;
+}
+
+.invite-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: end;
+}
+
+@media (max-width: 640px) {
+  .invite-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.invite-btn {
+  white-space: nowrap;
+  height: 38px;
+}
+
+.success {
+  color: #065f46;
+  font-size: 0.82rem;
+  display: block;
+  margin-top: 6px;
+}

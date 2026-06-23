@@ -12,6 +12,7 @@ import {
 import { AuthService } from '../../services/auth.service';
 import { ConsumptionService } from '../../services/consumption.service';
 import { ProductService } from '../../services/product.service';
+import { ProductTimelineComponent } from '../product-timeline/product-timeline.component';
 
 /**
  * Page publique d'un produit — destinée au consommateur final qui scanne
@@ -28,7 +29,7 @@ import { ProductService } from '../../services/product.service';
 @Component({
   selector: 'app-public-product',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, ProductTimelineComponent],
   template: `
     <div class="public-page">
       <header class="public-header">
@@ -130,52 +131,11 @@ import { ProductService } from '../../services/product.service';
               <h2>Le parcours de votre produit</h2>
               <p class="section-intro">Suivez chaque étape de fabrication, de la matière première jusqu'à la distribution.</p>
 
-              <ol class="timeline">
-                <li *ngFor="let s of p.steps; let i = index" class="step">
-                  <div class="step-bullet" [style.background]="colorFor(i)">{{ s.position }}</div>
-                  <div class="step-content">
-                    <div class="step-top">
-                      <h3>{{ s.name }}</h3>
-                      <span class="step-type-tag">{{ stepTypeLabels[s.step_type] }}</span>
-                    </div>
-
-                    <div class="step-grid">
-                      <div *ngIf="s.supplier" class="step-info">
-                        <div class="info-key">Fournisseur</div>
-                        <div class="info-val">{{ s.supplier }}</div>
-                      </div>
-                      <div *ngIf="s.location" class="step-info">
-                        <div class="info-key">Lieu</div>
-                        <div class="info-val">{{ s.location }}</div>
-                      </div>
-                      <div class="step-info">
-                        <div class="info-key">Poids</div>
-                        <div class="info-val">{{ s.weight_kg }} kg</div>
-                      </div>
-                      <div *ngIf="s.transport_mode" class="step-info">
-                        <div class="info-key">Transport</div>
-                        <div class="info-val">{{ transportModeLabels[s.transport_mode] }}</div>
-                      </div>
-                      <div *ngIf="s.distance_km" class="step-info">
-                        <div class="info-key">Distance</div>
-                        <div class="info-val">{{ s.distance_km }} km</div>
-                      </div>
-                    </div>
-
-                    <div class="step-co2">
-                      <span class="step-co2-value">{{ s.co2_kg | number:'1.0-2' }} kg CO₂</span>
-                      <span class="step-co2-pct">
-                        {{ percent(s.co2_kg ?? 0, p.total_co2_kg ?? 0) | number:'1.0-0' }}% du total
-                      </span>
-                    </div>
-
-                    <div class="step-hash" *ngIf="s.hash">
-                      <span class="hash-tag">SHA-256</span>
-                      <code class="hash-mono">{{ s.hash.substring(0, 12) }}…{{ s.hash.substring(s.hash.length - 6) }}</code>
-                    </div>
-                  </div>
-                </li>
-              </ol>
+              <!-- Timeline avec support des étapes parallèles -->
+              <app-product-timeline
+                [steps]="p.steps"
+                [totalCo2]="p.total_co2_kg ?? 0"
+              ></app-product-timeline>
 
               <section class="chain-section">
                 <h3>

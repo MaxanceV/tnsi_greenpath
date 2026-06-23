@@ -13,6 +13,8 @@ import {
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import {
+  Contributor,
+  Product,
   STEP_TYPE_LABELS,
   StepType,
   TRANSPORT_MODE_LABELS,
@@ -38,9 +40,10 @@ const uniquePositionsValidator: ValidatorFn = (
  * - Mode création : route `/products/new`, démarre avec une étape vide.
  * - Mode édition  : route `/products/:id/edit`, charge le produit existant.
  *
- * Le formulaire utilise un `FormArray` pour les étapes, ce qui permet
- * d'ajouter/supprimer/réordonner dynamiquement. Un validateur custom
- * garantit l'unicité des positions (cohérence avec le back).
+ * En mode édition, deux sections supplémentaires sont disponibles :
+ * - Sélecteur "Produit source" dans chaque étape (upstream_product_id)
+ * - Gestion des contributeurs : inviter une entreprise tierce par email,
+ *   consulter la liste des accès, révoquer un accès.
  */
 @Component({
   selector: 'app-product-form',
@@ -65,6 +68,17 @@ export class ProductFormComponent implements OnInit {
   submitting = false;
   serverError: string | null = null;
 
+  // Liste de tous les produits pour le sélecteur "produit source"
+  allProducts: Product[] = [];
+
+  // Gestion des contributeurs (mode édition uniquement)
+  contributors: Contributor[] = [];
+  contributorEmail = '';
+  contributorScope = 'write';
+  contributorError: string | null = null;
+  contributorSuccess: string | null = null;
+  contributorLoading = false;
+
   readonly form: FormGroup = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(120)]],
     description: ['', [Validators.maxLength(500)]],
@@ -76,10 +90,17 @@ export class ProductFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Charger tous les produits pour le sélecteur upstream
+    this.productService.list().subscribe({
+      next: (products) => (this.allProducts = products),
+      error: () => {},
+    });
+
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
       this.productId = Number(idParam);
       this.loadProduct(this.productId);
+      this.loadContributors(this.productId);
     } else {
       this.addStep();
     }
@@ -106,6 +127,51 @@ export class ProductFormComponent implements OnInit {
     });
   }
 
+  // ── Contributeurs ────────────────────────────────────────────────────────
+
+  private loadContributors(productId: number): void {
+    this.productService.getContributors(productId).subscribe({
+      next: (list) => (this.contributors = list),
+      error: () => {},
+    });
+  }
+
+  addContributor(): void {
+    if (!this.productId || !this.contributorEmail.trim()) return;
+    this.contributorError = null;
+    this.contributorSuccess = null;
+    this.contributorLoading = true;
+
+    this.productService
+      .addContributor(this.productId, this.contributorEmail.trim(), this.contributorScope)
+      .subscribe({
+        next: (c) => {
+          this.contributors.push(c);
+          this.contributorEmail = '';
+          this.contributorSuccess = `${c.company_name} a bien été ajouté.`;
+          this.contributorLoading = false;
+        },
+        error: (err) => {
+          const detail = err?.error?.detail;
+          this.contributorError =
+            typeof detail === 'string' ? detail : 'Impossible d\'ajouter ce contributeur.';
+          this.contributorLoading = false;
+        },
+      });
+  }
+
+  removeContributor(userId: number): void {
+    if (!this.productId) return;
+    this.productService.removeContributor(this.productId, userId).subscribe({
+      next: () => {
+        this.contributors = this.contributors.filter((c) => c.user_id !== userId);
+      },
+      error: () => {},
+    });
+  }
+
+  // ── Formulaire étapes ─────────────────────────────────────────────────────
+
   private buildStepGroup(values?: Partial<{
     position: number;
     name: string;
@@ -115,6 +181,9 @@ export class ProductFormComponent implements OnInit {
     weight_kg: number;
     transport_mode: TransportMode | null;
     distance_km: number | null;
+    parallel_group: number | null;
+    upstream_product_id: number | null;
+    upstream_batch_id: number | null;
   }>): FormGroup {
     return this.fb.group({
       position: [
@@ -131,6 +200,9 @@ export class ProductFormComponent implements OnInit {
       ],
       transport_mode: [values?.transport_mode ?? ''],
       distance_km: [values?.distance_km ?? null, [Validators.min(0)]],
+      parallel_group: [values?.parallel_group ?? null, [Validators.min(1)]],
+      upstream_product_id: [values?.upstream_product_id ?? null],
+      upstream_batch_id: [values?.upstream_batch_id ?? null],
     });
   }
 
@@ -163,6 +235,8 @@ export class ProductFormComponent implements OnInit {
     return control.touched && control.hasError(error);
   }
 
+  // ── Soumission ────────────────────────────────────────────────────────────
+
   submit(): void {
     this.serverError = null;
     if (this.form.invalid || this.steps.length === 0) {
@@ -187,6 +261,10 @@ export class ProductFormComponent implements OnInit {
         transport_mode: s.transport_mode || null,
         distance_km:
           s.distance_km === null || s.distance_km === '' ? null : Number(s.distance_km),
+        parallel_group:
+          s.parallel_group === null || s.parallel_group === '' ? null : Number(s.parallel_group),
+        upstream_product_id: s.upstream_product_id ? Number(s.upstream_product_id) : null,
+        upstream_batch_id: s.upstream_batch_id ? Number(s.upstream_batch_id) : null,
       })),
     };
 
