@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { AdminUsersComponent } from './components/admin-users/admin-users.component';
+import { LandingComponent } from './components/landing/landing.component';
 import { LoginComponent } from './components/login/login.component';
 import { MyConsumptionComponent } from './components/my-consumption/my-consumption.component';
 import { ProductFormComponent } from './components/product-form/product-form.component';
@@ -17,9 +18,8 @@ import {
 } from './guards/auth.guard';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'products', pathMatch: 'full' },
-
   // Pages publiques (sans auth)
+  { path: '', component: LandingComponent },
   { path: 'search', component: PublicSearchComponent },
   { path: 'p/:id', component: PublicProductComponent },
 
@@ -36,5 +36,5 @@ export const routes: Routes = [
   // Pages consommateur
   { path: 'my-consumption', component: MyConsumptionComponent, canActivate: [authGuard, consumerGuard] },
 
-  { path: '**', redirectTo: 'products' },
+  { path: '**', redirectTo: '' },
 ];

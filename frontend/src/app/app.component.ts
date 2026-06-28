@@ -19,6 +19,7 @@ import { AuthService } from './services/auth.service';
         </a>
 
         <div class="nav-links">
+          <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">À propos</a>
           <a *ngIf="!auth.isConsumer()" routerLink="/products" routerLinkActive="active">Produits</a>
           <a *ngIf="auth.isAdmin()" routerLink="/admin/users" routerLinkActive="active">Utilisateurs</a>
           <a *ngIf="auth.isConsumer()" routerLink="/my-consumption" routerLinkActive="active">Ma consommation</a>
