@@ -112,14 +112,30 @@
               <small class="error" *ngIf="hasError(stepCtrl.get('distance_km'), 'min')">Doit être ≥ 0.</small>
             </label>
 
-            <label class="field">
-              <span>
-                Groupe parallèle
-                <span class="field-hint" title="Étapes avec le même numéro seront affichées côte à côte dans la timeline">ⓘ</span>
+            <!-- Sélecteur d'étapes parentes ──────────────────────────── -->
+            <div class="field grid-span-2 parent-selector" *ngIf="steps.length > 1">
+              <span class="parent-label">
+                Étapes parentes
+                <span class="field-hint" title="Les flèches de la timeline partiront de ces étapes vers celle-ci">ⓘ</span>
               </span>
-              <input type="number" step="1" min="1" formControlName="parallel_group" placeholder="Ex: 1 (optionnel)" />
-              <small class="field-help">Même numéro = étapes parallèles dans la timeline</small>
-            </label>
+              <div class="parent-checkboxes">
+                <label
+                  *ngFor="let otherCtrl of steps.controls; let j = index"
+                  class="parent-check"
+                  [class.disabled]="j === i"
+                >
+                  <input
+                    type="checkbox"
+                    [disabled]="j === i"
+                    [checked]="isParentSelected(stepCtrl, otherCtrl.get('position')?.value)"
+                    (change)="toggleParent(stepCtrl, otherCtrl.get('position')?.value, $event)"
+                  />
+                  <span class="parent-num">{{ otherCtrl.get('position')?.value }}</span>
+                  {{ otherCtrl.get('name')?.value || '(sans nom)' }}
+                </label>
+              </div>
+              <small class="field-help">Les flèches de la timeline relieront les parents à cette étape</small>
+            </div>
 
             <!-- Produit source (upstream) ──────────────────────────────── -->
             <label class="field grid-span-2">

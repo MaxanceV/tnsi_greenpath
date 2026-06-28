@@ -21,7 +21,7 @@ export const TRANSPORT_MODE_LABELS: Record<TransportMode, string> = {
   aucun: 'Aucun',
 };
 
-/** Info sur l'entreprise ayant saisi une étape (multi-entreprise) */
+/** Info sur l'entreprise ayant saisi une etape (multi-entreprise) */
 export interface StepContributor {
   id: number;
   company_name: string;
@@ -39,17 +39,17 @@ export interface Step {
   transport_mode?: TransportMode | null;
   distance_km?: number | null;
   co2_kg?: number;
-  /** Hash SHA-256 chaîné de l'étape (cf. services/blockchain.py côté back) */
+  /** Hash SHA-256 chaine de l'etape */
   hash?: string | null;
   /**
-   * Groupe de parallélisme : les étapes avec le même parallel_group
-   * sont affichées côte à côte dans la timeline.
-   * null = étape séquentielle classique.
+   * Positions des etapes parentes dans ce produit (DAG parent->enfant).
+   * Ex: [1, 2] = cette etape depend des etapes a position 1 et 2.
+   * [] = etape racine (aucun parent).
    */
-  parallel_group?: number | null;
-  /** Entreprise ayant saisi cette étape. null = owner du produit. */
+  parent_positions?: number[];
+  /** Entreprise ayant saisi cette etape. null = owner du produit. */
   contributor?: StepContributor | null;
-  /** ID du produit GreenPath amont intégré dans cette étape */
+  /** ID du produit GreenPath amont integre dans cette etape */
   upstream_product_id?: number | null;
   upstream_batch_id?: number | null;
   upstream_product_name?: string | null;
@@ -70,13 +70,13 @@ export interface Product {
   steps: Step[];
   total_co2_kg?: number;
   owner?: ProductOwner | null;
-  /** True si la chaîne de hashes est cohérente avec le contenu des étapes */
+  /** True si la chaine de hashes est coherente avec le contenu des etapes */
   chain_valid?: boolean;
-  /** Nombre d'entreprises tierces ayant accès en écriture */
+  /** Nombre d'entreprises tierces ayant acces en ecriture */
   contributor_count?: number;
 }
 
-/** Entreprise tierce ayant accès à un produit */
+/** Entreprise tierce ayant acces a un produit */
 export interface Contributor {
   user_id: number;
   company_name: string;
@@ -98,15 +98,4 @@ export interface ProductPayload {
   description?: string | null;
   gtin?: string | null;
   steps: Step[];
-}
-
-/**
- * Groupe d'étapes pour la visualisation en timeline.
- * Les étapes séquentielles ont un groupe de 1 élément.
- * Les étapes parallèles sont regroupées dans le même tableau.
- */
-export interface StepGroup {
-  parallel_group: number | null;
-  steps: Step[];
-  isParallel: boolean;
 }

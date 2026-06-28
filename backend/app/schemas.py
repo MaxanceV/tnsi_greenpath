@@ -40,8 +40,8 @@ class StepBase(BaseModel):
     weight_kg: float = Field(..., gt=0)
     transport_mode: Optional[str] = None
     distance_km: Optional[float] = Field(default=None, ge=0)
-    # Parallélisme : étapes avec le même parallel_group sont affichées côte à côte
-    parallel_group: Optional[int] = Field(default=None, ge=1)
+    # DAG : positions des étapes parentes (ex: [1, 2] = dépend des étapes 1 et 2)
+    parent_positions: List[int] = Field(default_factory=list)
     # Multi-entreprise : référence à un produit GreenPath amont
     upstream_product_id: Optional[int] = Field(default=None)
     upstream_batch_id: Optional[int] = Field(default=None)

@@ -27,7 +27,7 @@ Product.steps. L'integrite referentielle est garantie cote application.
 
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import JSON, Column, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -102,7 +102,10 @@ class Step(Base):
         nullable=False,
     )
     position = Column(Integer, nullable=False)
-    parallel_group = Column(Integer, nullable=True)
+    # Positions des étapes parentes dans le même produit (liste JSON d'entiers).
+    # Ex: [1, 2] = "cette étape dépend des étapes 1 et 2".
+    # Pas de FK déclarée pour rester cohérent avec upstream_product_id.
+    parent_positions = Column(JSON, nullable=True, default=list)
     name = Column(String, nullable=False)
     step_type = Column(String, nullable=False)
     supplier = Column(String, nullable=True)

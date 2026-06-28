@@ -35,17 +35,6 @@ const uniquePositionsValidator: ValidatorFn = (
   return dup ? { duplicatePositions: true } : null;
 };
 
-/**
- * Formulaire de création / édition d'un produit et de ses étapes.
- *
- * - Mode création : route `/products/new`, démarre avec une étape vide.
- * - Mode édition  : route `/products/:id/edit`, charge le produit existant.
- *
- * En mode édition, deux sections supplémentaires sont disponibles :
- * - Sélecteur "Produit source" dans chaque étape (upstream_product_id)
- * - Gestion des contributeurs : inviter une entreprise tierce par email,
- *   consulter la liste des accès, révoquer un accès.
- */
 @Component({
   selector: 'app-product-form',
   standalone: true,
@@ -69,10 +58,8 @@ export class ProductFormComponent implements OnInit {
   submitting = false;
   serverError: string | null = null;
 
-  // Liste de tous les produits pour le sélecteur "produit source"
   allProducts: Product[] = [];
 
-  // Gestion des contributeurs (mode édition uniquement)
   contributors: Contributor[] = [];
   contributorEmail = '';
   contributorScope = 'write';
@@ -92,7 +79,6 @@ export class ProductFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Charger tous les produits pour le sélecteur upstream
     this.productService.list().subscribe({
       next: (products) => (this.allProducts = products),
       error: () => {},
@@ -130,8 +116,6 @@ export class ProductFormComponent implements OnInit {
     });
   }
 
-  // ── Contributeurs ────────────────────────────────────────────────────────
-
   private loadContributors(productId: number): void {
     this.productService.getContributors(productId).subscribe({
       next: (list) => (this.contributors = list),
@@ -151,13 +135,13 @@ export class ProductFormComponent implements OnInit {
         next: (c) => {
           this.contributors.push(c);
           this.contributorEmail = '';
-          this.contributorSuccess = `${c.company_name} a bien été ajouté.`;
+          this.contributorSuccess = c.company_name + ' a bien ete ajoute.';
           this.contributorLoading = false;
         },
         error: (err) => {
           const detail = err?.error?.detail;
           this.contributorError =
-            typeof detail === 'string' ? detail : 'Impossible d\'ajouter ce contributeur.';
+            typeof detail === 'string' ? detail : "Impossible d'ajouter ce contributeur.";
           this.contributorLoading = false;
         },
       });
@@ -173,8 +157,6 @@ export class ProductFormComponent implements OnInit {
     });
   }
 
-  // ── Formulaire étapes ─────────────────────────────────────────────────────
-
   private buildStepGroup(values?: Partial<{
     position: number;
     name: string;
@@ -184,7 +166,7 @@ export class ProductFormComponent implements OnInit {
     weight_kg: number;
     transport_mode: TransportMode | null;
     distance_km: number | null;
-    parallel_group: number | null;
+    parent_positions: number[];
     upstream_product_id: number | null;
     upstream_batch_id: number | null;
   }>): FormGroup {
@@ -203,10 +185,29 @@ export class ProductFormComponent implements OnInit {
       ],
       transport_mode: [values?.transport_mode ?? ''],
       distance_km: [values?.distance_km ?? null, [Validators.min(0)]],
-      parallel_group: [values?.parallel_group ?? null, [Validators.min(1)]],
+      parent_positions: [values?.parent_positions ?? []],
       upstream_product_id: [values?.upstream_product_id ?? null],
       upstream_batch_id: [values?.upstream_batch_id ?? null],
     });
+  }
+
+  isParentSelected(stepCtrl: AbstractControl, parentPos: number): boolean {
+    const parents: number[] = stepCtrl.get('parent_positions')?.value ?? [];
+    return parents.includes(parentPos);
+  }
+
+  toggleParent(stepCtrl: AbstractControl, parentPos: number, event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    const ctrl = stepCtrl.get('parent_positions');
+    if (!ctrl) return;
+    const current: number[] = [...(ctrl.value ?? [])];
+    if (checked && !current.includes(parentPos)) {
+      current.push(parentPos);
+    } else {
+      const idx = current.indexOf(parentPos);
+      if (idx > -1) current.splice(idx, 1);
+    }
+    ctrl.setValue(current.sort((a, b) => a - b));
   }
 
   addStep(): void {
@@ -238,14 +239,12 @@ export class ProductFormComponent implements OnInit {
     return control.touched && control.hasError(error);
   }
 
-  // ── Soumission ────────────────────────────────────────────────────────────
-
   submit(): void {
     this.serverError = null;
     if (this.form.invalid || this.steps.length === 0) {
       this.form.markAllAsTouched();
       if (this.steps.length === 0) {
-        this.serverError = 'Ajoutez au moins une étape';
+        this.serverError = 'Ajoutez au moins une etape';
       }
       return;
     }
@@ -265,8 +264,7 @@ export class ProductFormComponent implements OnInit {
         transport_mode: s.transport_mode || null,
         distance_km:
           s.distance_km === null || s.distance_km === '' ? null : Number(s.distance_km),
-        parallel_group:
-          s.parallel_group === null || s.parallel_group === '' ? null : Number(s.parallel_group),
+        parent_positions: Array.isArray(s.parent_positions) ? s.parent_positions.map(Number) : [],
         upstream_product_id: s.upstream_product_id ? Number(s.upstream_product_id) : null,
         upstream_batch_id: s.upstream_batch_id ? Number(s.upstream_batch_id) : null,
       })),
@@ -287,11 +285,11 @@ export class ProductFormComponent implements OnInit {
         this.submitting = false;
         const detail = err?.error?.detail;
         if (Array.isArray(detail)) {
-          this.serverError = detail.map((d: any) => `${d.loc?.join('.')}: ${d.msg}`).join(' | ');
+          this.serverError = detail.map((d: any) => d.loc?.join('.') + ': ' + d.msg).join(' | ');
         } else if (typeof detail === 'string') {
           this.serverError = detail;
         } else {
-          this.serverError = 'Erreur lors de l\'enregistrement';
+          this.serverError = "Erreur lors de l'enregistrement";
         }
       },
     });

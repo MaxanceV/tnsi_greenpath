@@ -45,7 +45,8 @@ class DemoStep:
     location: Optional[str] = None
     transport_mode: Optional[str] = None
     distance_km: Optional[float] = None
-    parallel_group: Optional[int] = None
+    # Positions des étapes parentes dans ce produit (DAG parent→enfant)
+    parent_positions: List[int] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -204,18 +205,20 @@ DEMO_PRODUCTS: List[DemoProduct] = [
     ),
     DemoProduct(
         "Tablette praliné amande",
-        "Tablette 100g, chocolat au lait fourré praliné amande. Exemple d'étapes parallèles GreenPath.",
+        "Tablette 100g, chocolat au lait fourré praliné amande. Exemple de DAG GreenPath (2 sources → 2 transports → fabrication → distribution).",
         "chocoprovence@demo.greenpath",
         [
-            # Étapes parallèles (parallel_group=1) : approvisionnement cacao ET amandes en même temps
-            DemoStep(1, "Cacao Ghana", "matiere_premiere", 0.04, "Cacao Ghana Coop", "Kumasi, Ghana", parallel_group=1),
-            DemoStep(2, "Culture amandes Provence", "matiere_premiere", 0.03, "Provence Amandes", "Aix, France", parallel_group=1),
-            # Transport parallèle aussi (parallel_group=2)
-            DemoStep(3, "Transport cacao maritime", "transport", 0.04, location="Ghana → Le Havre", transport_mode="bateau", distance_km=6500, parallel_group=2),
-            DemoStep(4, "Transport amandes", "transport", 0.03, location="Aix → Marseille", transport_mode="camion", distance_km=30, parallel_group=2),
-            # Séquentiel ensuite
-            DemoStep(5, "Fabrication et fourrage", "fabrication", 0.1, "FabChoco", "Marseille, France"),
-            DemoStep(6, "Distribution magasins", "distribution", 0.1, transport_mode="camion", distance_km=500),
+            # Racines : 2 matières premières indépendantes, sans parent
+            DemoStep(1, "Cacao Ghana", "matiere_premiere", 0.04, "Cacao Ghana Coop", "Kumasi, Ghana"),
+            DemoStep(2, "Culture amandes Provence", "matiere_premiere", 0.03, "Provence Amandes", "Aix, France"),
+            # Transport cacao → dépend de l'étape 1
+            DemoStep(3, "Transport cacao maritime", "transport", 0.04, location="Ghana → Le Havre", transport_mode="bateau", distance_km=6500, parent_positions=[1]),
+            # Transport amandes → dépend de l'étape 2
+            DemoStep(4, "Transport amandes", "transport", 0.03, location="Aix → Marseille", transport_mode="camion", distance_km=30, parent_positions=[2]),
+            # Fabrication → fusionne les 2 transports (parents = 3 et 4)
+            DemoStep(5, "Fabrication et fourrage", "fabrication", 0.1, "FabChoco", "Marseille, France", parent_positions=[3, 4]),
+            # Distribution → dépend de la fabrication
+            DemoStep(6, "Distribution magasins", "distribution", 0.1, transport_mode="camion", distance_km=500, parent_positions=[5]),
         ],
     ),
 
@@ -625,7 +628,7 @@ def _get_or_create_product(db, demo: DemoProduct, owner: models.User) -> tuple[m
                 weight_kg=step.weight_kg,
                 transport_mode=step.transport_mode,
                 distance_km=step.distance_km,
-                parallel_group=step.parallel_group,
+                parent_positions=step.parent_positions if step.parent_positions else None,
             )
         )
     db.add(product)

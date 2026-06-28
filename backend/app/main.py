@@ -42,7 +42,7 @@ def _migrate_gs1_and_batch_columns() -> None:
     Migrations effectuées :
     - users.gln              : GLN GS1 de l'entreprise (13 chiffres)
     - products.gtin          : GTIN-14 GS1 du produit
-    - steps.parallel_group   : groupe de parallélisme pour la timeline
+    - steps.parent_positions : JSON liste des positions parentes (DAG)
     - steps.contributor_id   : FK vers l'entreprise ayant saisi l'étape
     - steps.upstream_product_id : FK vers un produit GreenPath amont
     - steps.upstream_batch_id   : FK vers un lot amont
@@ -65,7 +65,7 @@ def _migrate_gs1_and_batch_columns() -> None:
         # --- steps ---
         step_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(steps)")).fetchall()}
         new_step_cols = {
-            "parallel_group": "INTEGER",
+            "parent_positions": "TEXT",
             "contributor_id": "INTEGER REFERENCES users(id) ON DELETE SET NULL",
             "upstream_product_id": "INTEGER REFERENCES products(id) ON DELETE SET NULL",
             "upstream_batch_id": "INTEGER REFERENCES batches(id) ON DELETE SET NULL",

@@ -236,6 +236,69 @@
   .grid-span-2 { grid-column: span 1; }
 }
 
+/* ── Sélecteur de parents ───────────────────────────────────────────────── */
+
+.parent-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.parent-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.parent-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.parent-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 0.84rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.parent-check:hover:not(.disabled) {
+  background: #f0fdf4;
+  border-color: #10b981;
+}
+
+.parent-check.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.parent-check input[type="checkbox"] {
+  accent-color: #10b981;
+  width: 14px;
+  height: 14px;
+}
+
+.parent-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: #10b981;
+  color: white;
+  border-radius: 50%;
+  font-size: 0.72rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
 /* ── Contributeurs ──────────────────────────────────────────────────────── */
 
 .contributors-card {
