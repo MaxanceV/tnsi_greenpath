@@ -127,6 +127,63 @@ import { AuthService } from '../../services/auth.service';
 
 <section class="section bg-white">
   <div class="inner">
+    <div class="label green">Fonctionnalites</div>
+    <h2>Tout ce que GreenPath inclut</h2>
+    <p class="sub">Une plateforme complete, de la creation du produit jusqu au scan du consommateur final.</p>
+    <div class="roles-grid">
+      <div class="role-col">
+        <div class="role-head" style="background:#dcf5e2;color:#064e3b">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Consommateur
+        </div>
+        <ul class="role-list">
+          <li><span class="ck">&#10003;</span>Recherche publique par nom, GTIN, fournisseur ou lieu</li>
+          <li><span class="ck">&#10003;</span>Page produit accessible sans compte via QR code</li>
+          <li><span class="ck">&#10003;</span>Visualisation DAG de la supply chain (graph interactif)</li>
+          <li><span class="ck">&#10003;</span>Empreinte CO2 detaillee par etape de production</li>
+          <li><span class="ck">&#10003;</span>Type de chaque etape : matiere premiere, transport, fabrication...</li>
+          <li><span class="ck">&#10003;</span>Inscription consommateur et tableau de bord personnel</li>
+          <li><span class="ck">&#10003;</span>Historique de scans avec statistiques CO2 cumulees</li>
+          <li><span class="ck">&#10003;</span>GreenBot : chatbot RAG avec suggestions contextuelles</li>
+        </ul>
+      </div>
+      <div class="role-col">
+        <div class="role-head" style="background:#dbeafe;color:#1e40af">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          Entreprise / Staff
+        </div>
+        <ul class="role-list">
+          <li><span class="ck">&#10003;</span>Dashboard RSE : KPIs produits, etapes et CO2</li>
+          <li><span class="ck">&#10003;</span>Creation et edition de produits avec GTIN-14</li>
+          <li><span class="ck">&#10003;</span>Formulaire multi-etapes avec DAG de parallelisme</li>
+          <li><span class="ck">&#10003;</span>Generation automatique de QR codes GS1 (PNG)</li>
+          <li><span class="ck">&#10003;</span>Gestion des lots de production (batches)</li>
+          <li><span class="ck">&#10003;</span>Invitation de fournisseurs contributeurs par email</li>
+          <li><span class="ck">&#10003;</span>Gestion des droits d acces par produit (scope)</li>
+          <li><span class="ck">&#10003;</span>GreenBot : chatbot RAG avec acces aux donnees produits</li>
+        </ul>
+      </div>
+      <div class="role-col">
+        <div class="role-head" style="background:#ede9fe;color:#5b21b6">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Administrateur
+        </div>
+        <ul class="role-list">
+          <li><span class="ck">&#10003;</span>Panneau de gestion de tous les utilisateurs</li>
+          <li><span class="ck">&#10003;</span>Creation, edition et suppression de comptes</li>
+          <li><span class="ck">&#10003;</span>Attribution des roles : admin, entreprise, consommateur</li>
+          <li><span class="ck">&#10003;</span>Blocage de suppression de son propre compte</li>
+          <li><span class="ck">&#10003;</span>Vue du nombre de produits par utilisateur</li>
+          <li><span class="ck">&#10003;</span>Acces a toutes les fonctionnalites entreprise</li>
+          <li><span class="ck">&#10003;</span>GreenBot avec acces etendu au corpus documentaire</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section bg-gray">
+  <div class="inner">
     <div class="label green">Nos offres</div>
     <h2>Choisissez votre niveau de transparence</h2>
     <p class="sub">Toutes nos offres incluent la page consommateur publique et le QR code GS1. Sans engagement.</p>
@@ -291,8 +348,14 @@ import { AuthService } from '../../services/auth.service';
     .dc-bv{color:#a3e8b0;font-size:0.68rem;white-space:nowrap}
     .dc-step{display:flex;align-items:center;gap:7px;color:rgba(255,255,255,0.72);font-size:0.76rem;margin-bottom:7px}
     .dc-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+    .roles-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+    .role-col{border:1px solid #e5e7eb;border-radius:12px;overflow:hidden}
+    .role-head{display:flex;align-items:center;gap:8px;padding:14px 18px;font-size:0.85rem;font-weight:700}
+    .role-list{list-style:none;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+    .role-list li{display:flex;align-items:flex-start;gap:8px;font-size:0.82rem;color:#374151;line-height:1.45}
+    .ck{color:#2da844;font-weight:700;font-size:0.85rem;flex-shrink:0;margin-top:1px}
     .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
-    .price-card{border:1px solid #e5e7eb;border-radius:14px;padding:26px 22px;position:relative;transition:box-shadow 0.2s}
+    .price-card{border:1px solid #e5e7eb;border-radius:14px;padding:26px 22px;position:relative;transition:box-shadow 0.2s;background:white}
     .price-card:hover{box-shadow:0 10px 36px rgba(0,0,0,0.09)}
     .price-card.featured{border-color:#2da844;border-width:2px}
     .fbadge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:#2da844;color:white;font-size:0.7rem;font-weight:700;padding:3px 13px;border-radius:999px;white-space:nowrap}
