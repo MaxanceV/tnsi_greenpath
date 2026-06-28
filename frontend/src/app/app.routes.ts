@@ -4,6 +4,7 @@ import { AdminUsersComponent } from './components/admin-users/admin-users.compon
 import { LandingComponent } from './components/landing/landing.component';
 import { LoginComponent } from './components/login/login.component';
 import { MyConsumptionComponent } from './components/my-consumption/my-consumption.component';
+import { ProductDetailComponent } from './components/product-detail/product-detail.component';
 import { ProductFormComponent } from './components/product-form/product-form.component';
 import { ProductListComponent } from './components/product-list/product-list.component';
 import { PublicProductComponent } from './components/public-product/public-product.component';
@@ -30,6 +31,7 @@ export const routes: Routes = [
   // Pages staff (admin + entreprise)
   { path: 'products', component: ProductListComponent, canActivate: [authGuard, staffGuard] },
   { path: 'products/new', component: ProductFormComponent, canActivate: [authGuard, staffGuard] },
+  { path: 'products/:id', component: ProductDetailComponent, canActivate: [authGuard, staffGuard] },
   { path: 'products/:id/edit', component: ProductFormComponent, canActivate: [authGuard, staffGuard] },
   { path: 'admin/users', component: AdminUsersComponent, canActivate: [authGuard, adminGuard] },
 

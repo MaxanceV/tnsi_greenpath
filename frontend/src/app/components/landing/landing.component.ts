@@ -157,9 +157,10 @@ import { AuthService } from '../../services/auth.service';
           <li><span class="ck">&#10003;</span>Creation et edition de produits avec GTIN-14</li>
           <li><span class="ck">&#10003;</span>Formulaire multi-etapes avec DAG de parallelisme</li>
           <li><span class="ck">&#10003;</span>Generation automatique de QR codes GS1 (PNG)</li>
-          <li><span class="ck">&#10003;</span>Gestion des lots de production (batches)</li>
+          <li><span class="ck">&#10003;</span>Vue detail produit par onglets (Infos, Etapes, Lots, Contributeurs)</li>
+          <li><span class="ck">&#10003;</span>Gestion des lots de production GS1 (SSCC, dates, quantites)</li>
           <li><span class="ck">&#10003;</span>Invitation de fournisseurs contributeurs par email</li>
-          <li><span class="ck">&#10003;</span>Gestion des droits d acces par produit (scope)</li>
+          <li><span class="ck">&#10003;</span>Gestion des droits d acces par produit (scope read / write)</li>
           <li><span class="ck">&#10003;</span>GreenBot : chatbot RAG avec acces aux donnees produits</li>
         </ul>
       </div>
