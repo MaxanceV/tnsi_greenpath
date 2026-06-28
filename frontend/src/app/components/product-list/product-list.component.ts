@@ -148,6 +148,7 @@ type SortKey = 'date_desc' | 'date_asc' | 'co2_desc' | 'co2_asc' | 'name_asc';
               </svg>
               Page publique
             </a>
+            <a [routerLink]="['/products', p.id]" class="btn btn-detail">Détail</a>
             <a [routerLink]="['/products', p.id, 'edit']" class="btn btn-secondary">Modifier</a>
             <button type="button" class="btn btn-danger" (click)="remove(p)">Supprimer</button>
           </div>
@@ -349,8 +350,9 @@ type SortKey = 'date_desc' | 'date_asc' | 'co2_desc' | 'co2_asc' | 'name_asc';
             </svg>
             Voir page publique
           </a>
+          <a [routerLink]="['/products', selectedProduct.id]" class="btn btn-primary" (click)="closeModal()">Voir le détail</a>
           <a [routerLink]="['/products', selectedProduct.id, 'edit']" class="btn btn-secondary" (click)="closeModal()">Modifier</a>
-          <button type="button" class="btn btn-primary" (click)="closeModal()">Fermer</button>
+          <button type="button" class="btn btn-ghost" (click)="closeModal()">Fermer</button>
         </footer>
       </div>
     </div>
@@ -482,6 +484,10 @@ type SortKey = 'date_desc' | 'date_asc' | 'co2_desc' | 'co2_asc' | 'name_asc';
       .btn-public:hover { background: #a7f3d0; }
       .btn-qr { background: #f3f4f6; color: #1f2937; display: inline-flex; align-items: center; border: 1px solid #e5e7eb; }
       .btn-qr:hover { background: #e5e7eb; }
+      .btn-detail { background: #ede9fe; color: #5b21b6; }
+      .btn-detail:hover { background: #ddd6fe; }
+      .btn-ghost { background: #f3f4f6; color: #6b7280; }
+      .btn-ghost:hover { background: #e5e7eb; }
       .btn-danger { background: #fee2e2; color: #991b1b; }
       .btn-danger:hover { background: #fecaca; }
 
