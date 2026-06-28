@@ -1,20 +1,8 @@
-# GreenPath — MVP Traçabilité RSE
+# GreenPath — Traçabilité RSE & Supply Chain
 
 > **Problématique :** Comment permettre aux entreprises européennes de tracer l'impact environnemental de leurs produits le long de leur supply chain afin de répondre aux obligations réglementaires et valoriser leur engagement RSE ?
 
----
-
-## L'équipe et la répartition des tâches
-
-| Personne | Lot fonctionnel | État |
-|---|---|---|
-| **Baptiste Matrat** | Saisie produit + étapes (formulaire, validation, CRUD) | Fait |
-| **Justine Rault** | Calcul CO₂ + dashboard (KPIs, détail par étape, recherche/filtres) | Fait |
-| **(temporaire — Baptiste)** | Auth (login, rôles, gestion utilisateurs, vues filtrées par entreprise) | Fait |
-| **Marie Probert** | Page publique consommateur + cohérence frontend | À faire |
-| **Ferdinand Martin-Lavigne** | Fake blockchain (hash SHA-256) + QR code | À faire |
-| **Maxance Villame** | Setup technique, jeu de données démo, tests | À faire |
-| **Abdrahamane Mbourou Camara** | Coordination (auth déjà implémentée) | À faire |
+GreenPath est une application web full-stack qui permet aux entreprises de tracer chaque étape du cycle de vie de leurs produits (matières premières, fabrication, transport, distribution), de calculer leur empreinte CO₂ et de la partager avec les consommateurs via QR code.
 
 ---
 
@@ -22,7 +10,7 @@
 
 | Couche | Choix | Pourquoi |
 |---|---|---|
-| Frontend | **Angular 19** (standalone components, signals, Reactive Forms) | Organisation claire, idéal pour le travail en équipe |
+| Frontend | **Angular 17** (standalone components, signals, Reactive Forms) | Organisation claire, idéal pour le travail en équipe |
 | Backend | **Python 3 + FastAPI** | API REST rapide, doc Swagger auto |
 | ORM | **SQLAlchemy** | Mapping objet/relationnel simple |
 | Base de données | **SQLite** (fichier local `greenpath.db`) | Zéro install |
@@ -30,6 +18,7 @@
 | Auth | **JWT** (`pyjwt`) + **bcrypt** (`passlib`) | Standard pour SPA + hash de passwords sécurisé |
 | Blockchain (simulée) | Fonction `anchor()` → hash SHA-256 | Remplaçable par Hyperledger en V2 |
 | QR Code | `qrcode` (Python) | Un QR par produit |
+| Identifiants GS1 | GLN (entreprise) + GTIN (produit) + SSCC (lot) | Norme internationale supply chain |
 | **Chatbot RAG** | `sentence-transformers` + `ChromaDB` + HF Inference API | Retrieval sémantique local (gratuit) + LLM via Hugging Face |
 
 ---
@@ -38,90 +27,188 @@
 
 ```mermaid
 erDiagram
-    USER ||--o{ PRODUCT : "possède"
+    USER ||--o{ PRODUCT : "possède (owner)"
+    USER ||--o{ CONSUMPTION : "suit"
+    USER ||--o{ PRODUCT_CONTRIBUTOR : "accès délégué"
     PRODUCT ||--o{ STEP : "contient (cascade delete)"
+    PRODUCT ||--o{ BATCH : "lots (cascade delete)"
+    PRODUCT ||--o{ PRODUCT_CONTRIBUTOR : "partagé avec"
+    BATCH }o--o{ BATCH : "parent/enfant (BATCH_PARENT)"
 
     USER {
         INTEGER id PK
-        STRING email UK "unique, validé"
+        STRING email UK "unique"
         STRING password_hash "bcrypt"
-        STRING role "admin | entreprise"
-        STRING company_name "nom commercial"
+        STRING role "admin | entreprise | consommateur"
+        STRING company_name
+        STRING gln "GLN GS1 (13 chiffres)"
         DATETIME created_at
     }
 
     PRODUCT {
         INTEGER id PK
-        INTEGER owner_id FK "→ users.id, ON DELETE SET NULL"
-        STRING name "obligatoire, 1-120 car."
-        STRING description "optionnel, max 500 car."
+        INTEGER owner_id FK "→ users.id, SET NULL"
+        STRING name
+        STRING description
+        STRING gtin "GTIN-14 GS1"
         DATETIME created_at
     }
 
     STEP {
         INTEGER id PK
-        INTEGER product_id FK "→ products.id, ON DELETE CASCADE"
-        INTEGER position "ordre, ≥ 1"
-        STRING name "obligatoire"
+        INTEGER product_id FK "→ products.id, CASCADE"
+        INTEGER position "ordre dans le DAG"
+        JSON parent_positions "positions parentes (DAG)"
+        STRING name
         STRING step_type "matiere_premiere | fabrication | transport | distribution"
-        STRING supplier "optionnel"
-        STRING location "optionnel"
-        FLOAT weight_kg "> 0"
+        STRING supplier
+        STRING location
+        FLOAT weight_kg
         STRING transport_mode "camion | bateau | avion | train | aucun"
-        FLOAT distance_km "≥ 0, optionnel"
+        FLOAT distance_km
+        STRING hash "SHA-256 (blockchain simulée)"
+        INTEGER contributor_id FK "→ users.id, SET NULL"
+        INTEGER upstream_product_id "produit GreenPath amont"
+        INTEGER upstream_batch_id "lot amont"
+    }
+
+    BATCH {
+        INTEGER id PK
+        STRING lot_number "numéro de lot"
+        STRING sscc "SSCC GS1 (18 chiffres)"
+        INTEGER product_id FK "→ products.id, CASCADE"
+        DATETIME start_date
+        DATETIME end_date
+        FLOAT quantity
+        STRING unit
+        STRING notes
+        DATETIME created_at
+    }
+
+    BATCH_PARENT {
+        INTEGER parent_id FK "→ batches.id, CASCADE"
+        INTEGER child_id FK "→ batches.id, CASCADE"
+    }
+
+    PRODUCT_CONTRIBUTOR {
+        INTEGER product_id FK "→ products.id, CASCADE"
+        INTEGER user_id FK "→ users.id, CASCADE"
+        INTEGER granted_by FK "→ users.id, SET NULL"
+        DATETIME granted_at
+        STRING scope "write | read"
+    }
+
+    CONSUMPTION {
+        INTEGER id PK
+        INTEGER user_id FK "→ users.id, CASCADE"
+        INTEGER product_id FK "→ products.id, CASCADE"
+        FLOAT quantity
+        STRING notes
+        DATETIME consumed_at
     }
 ```
 
-### Notes importantes
-
-- **Cascade delete** sur `STEP` : supprimer un produit supprime ses étapes.
-- **SET NULL** sur `PRODUCT.owner_id` : si on supprime un utilisateur, ses produits restent mais perdent leur propriétaire (seul l'admin les verra).
-- **Le CO₂ n'est PAS stocké** : recalculé à la volée depuis `services/co2.py` (facteurs ADEME).
-- Le mot de passe est **hashé en bcrypt** avant insertion : la DB ne contient jamais de mot de passe en clair.
+**Règles importantes :**
+- Cascade delete sur `STEP`, `BATCH`, `PRODUCT_CONTRIBUTOR` : supprimer un produit supprime toutes ses données associées.
+- SET NULL sur `PRODUCT.owner_id` : supprimer un utilisateur conserve ses produits (visibles par l'admin).
+- Le CO₂ n'est **pas stocké** : recalculé à la volée depuis `services/co2.py` (facteurs ADEME).
 
 ---
 
 ## Système d'authentification et de rôles
 
-### Deux rôles
-
-| Rôle | Peut faire |
+| Rôle | Accès |
 |---|---|
-| **`admin`** (Super Admin) | Voir tous les produits de toutes les entreprises · Créer / modifier / supprimer des utilisateurs · Changer les rôles · Accéder à `/admin/users` |
-| **`entreprise`** | Voir / créer / modifier / supprimer **uniquement ses propres produits** |
-| (non-connecté) | Accéder à la page publique d'un produit via `/public/products/{id}` (utilisé par le QR code consommateur) |
+| **`admin`** | Tous les produits toutes entreprises · CRUD utilisateurs · gestion des rôles |
+| **`entreprise`** | Ses propres produits uniquement · peut déléguer l'accès à d'autres entreprises |
+| **`consommateur`** | Scan produits (QR code) · historique personnel · accès au chatbot |
+| (non-connecté) | Page vitrine publique + `/public/products/{id}` |
 
-### Compte admin par défaut
-
-Au tout premier démarrage du backend, si aucun utilisateur n'existe en base, un admin est créé automatiquement :
+**Compte admin par défaut** (premier démarrage, aucun utilisateur en base) :
 
 | Email | Mot de passe |
 |---|---|
 | `admin@greenpath.com` | `admin123` |
 
-> **À changer en production** ! Le mot de passe peut être modifié depuis la page `/admin/users` une fois connecté.
-
-### Flux de connexion (JWT)
-
-1. L'utilisateur poste son email/mot de passe sur `POST /auth/login`.
-2. Le backend vérifie le hash bcrypt et renvoie un **JWT** signé (clé `HS256`, durée 24h) + les infos user.
-3. Le frontend stocke le token dans `localStorage` et l'envoie sur toutes les requêtes suivantes dans l'en-tête `Authorization: Bearer <token>` (via un intercepteur HTTP Angular).
-4. Si une requête renvoie `401`, l'intercepteur déconnecte l'utilisateur automatiquement.
+**Flux JWT :** POST `/auth/login` → JWT signé HS256 (24h) → `Authorization: Bearer <token>` sur toutes les requêtes → intercepteur Angular gère le 401.
 
 ---
 
-## Chatbot RAG (GreenBot)
+## Fonctionnalités
 
-GreenPath embarque un chatbot disponible une fois connecté (bulle verte en bas
-à droite). Il s'appuie sur un vrai pipeline **RAG** (Retrieval-Augmented
-Generation) avec embeddings sémantiques + LLM.
+### Page vitrine (publique)
+- Présentation de l'application, des fonctionnalités par rôle, de l'équipe
+- Navigation vers la démo et les comptes disponibles
+- Accès sans connexion
 
-### Architecture du RAG
+### Saisie produit + étapes
+- Formulaire Angular avec étapes dynamiques (ajouter/supprimer/réordonner)
+- Validation côté front (Reactive Forms) **et** côté back (Pydantic)
+- Support du graphe orienté acyclique (DAG) : chaque étape peut avoir plusieurs étapes parentes
+- Visualisation interactive de la chaîne sous forme de timeline/DAG
+
+### Blockchain simulée (SHA-256)
+- Chaque étape reçoit un hash SHA-256 calculé depuis ses données + le hash de l'étape précédente
+- Recalcul automatique à la création/modification d'une étape
+- Badge "Vérifié" si la chaîne est intègre (hashes cohérents)
+
+### QR code consommateur
+- Génération d'un QR code par produit pointant vers `/p/{id}`
+- Page publique consommateur : détail du produit, empreinte CO₂, étapes de la supply chain
+- Utilisable depuis un téléphone sur le même réseau local
+
+### Dashboard RSE
+- 4 KPIs en cartes (filtrés automatiquement selon rôle)
+- Liste avec colonne CO₂ et colonne Entreprise (admin uniquement)
+- Modale de détail avec barre de répartition CO₂ multicolore par étape
+- Recherche textuelle + filtres avancés (type d'étape, transport, fournisseur, lieu, poids, distance, CO₂)
+- Chips de filtres actifs retirables
+- Calcul CO₂ basé sur les facteurs ADEME
+
+### Identifiants GS1
+- GLN (Global Location Number, 13 chiffres) généré automatiquement pour chaque utilisateur
+- GTIN-14 (Global Trade Item Number) généré pour chaque produit
+- SSCC (Serial Shipping Container Code, 18 chiffres) disponible sur les lots
+
+### Gestion des lots (Batches)
+- Création et gestion de lots de production par produit
+- Numéro de lot, dates début/fin, quantité, unité, notes
+- Relations parent/enfant entre lots (traçabilité multi-niveaux)
+- SSCC GS1 automatique par lot
+
+### Accès multi-entreprise (Contributors)
+- Une entreprise peut déléguer l'accès à un de ses produits à une autre entreprise
+- Scope configurable (write/read)
+- L'entreprise contributrice peut saisir les étapes qui lui incombent
+- Référencement de produits ou lots amont (upstream_product_id, upstream_batch_id)
+
+### Suivi consommateur (Consumption)
+- Le consommateur ajoute des produits à son historique de consommation via QR code
+- Quantité et notes par entrée
+- Historique personnel consultable dans l'application
+
+### Chatbot RAG — GreenBot
+- Bulle verte en bas à droite, accessible une fois connecté
+- Pipeline complet : embeddings sémantiques (sentence-transformers) → ChromaDB → LLM (Mistral-7B via Hugging Face)
+- Filtres de retrieval métier par rôle (consommateur : ses produits scannés ; entreprise : ses produits ; admin : tout)
+- Classement CO₂ exact injecté dans le prompt pour des réponses factuelles
+- Sources affichées sous chaque réponse (transparence)
+- Indexation incrémentale : créer/modifier/supprimer un produit met à jour Chroma automatiquement
+- Knowledge base ADEME intégrée (`backend/knowledge/co2_facts.md`)
+
+### Administration
+- CRUD complet des utilisateurs (admin)
+- Changement de rôle, réinitialisation de mot de passe
+- Garde-fous : l'admin ne peut pas se supprimer ni se retirer son propre rôle
+
+---
+
+## Chatbot RAG — Architecture
 
 ```
 ┌──────────────────┐  embed   ┌──────────────┐
 │ Question user    │ ───────► │ sentence-    │
-│ (français)       │          │ transformers │ (modèle multilingue, local)
+│ (français)       │          │ transformers │ (multilingue, local)
 └──────────────────┘          └──────┬───────┘
                                      │ vecteur 384-dim
                                      ▼
@@ -130,34 +217,29 @@ Generation) avec embeddings sémantiques + LLM.
 │  - Tous les produits + étapes (indexés au boot)  │
 │  - Knowledge base CO2 (knowledge/*.md)           │
 └──────────────────────┬───────────────────────────┘
-                       │ top-6 documents similaires
-                       │ (filtrés par rôle utilisateur)
+                       │ top-10 documents (filtrés par rôle)
                        ▼
 ┌──────────────────────────────────────────────────┐
-│ Prompt construit avec :                          │
-│  - Instructions système (rôle-spécifique)        │
-│  - Documents récupérés                           │
-│  - Historique conversation                       │
-│  - Question                                      │
+│ Prompt : instructions système + classement CO₂  │
+│ exact depuis BDD + contexte RAG + historique     │
 └──────────────────────┬───────────────────────────┘
                        │ POST
                        ▼
 ┌──────────────────────────────────────────────────┐
 │ Hugging Face Inference API                       │
-│ Modèle : Mistral-7B-Instruct-v0.3 (défaut)       │
+│ Modèle : Mistral-7B-Instruct-v0.3               │
 └──────────────────────┬───────────────────────────┘
-                       │ réponse texte
+                       │
                        ▼
-            Affichage dans le widget + sources
+            Réponse + sources affichées dans le widget
 ```
 
-### Configurer le token Hugging Face (5 min, gratuit)
+### Configurer le token Hugging Face
 
 1. Créer un compte gratuit sur https://huggingface.co
-2. Aller sur https://huggingface.co/settings/tokens
-3. Cliquer **New token** → type **Read** → nommer **greenpath** → valider
-4. Copier la valeur du token (commence par `hf_...`)
-5. Côté projet :
+2. Aller sur https://huggingface.co/settings/tokens → **New token** (type Read) → nommer `greenpath`
+3. Copier la valeur (commence par `hf_...`)
+4. Dans le projet :
 
 ```bash
 cd backend
@@ -165,34 +247,9 @@ cp .env.example .env
 # Éditer .env et coller le token sur la ligne HF_TOKEN=
 ```
 
-6. Redémarrer le backend → le chatbot est prêt.
+5. Redémarrer le backend → GreenBot est prêt.
 
-> Sans token, le widget s'affiche mais répondra "Le chatbot n'est pas configuré". Le backend reste opérationnel pour tout le reste.
-
-### Quoi voir / dire au prof
-
-- Le pipeline est **complet** : embeddings sémantiques (pas du keyword matching), vector store, retrieval top-K avec filtres par rôle, LLM open-weights.
-- Les **filtres de retrieval** sont métier : un consommateur ne voit que les produits qu'il a scannés + la knowledge base ; une entreprise ne voit que ses propres produits.
-- L'**indexation est incrémentale** : créer/modifier/supprimer un produit met à jour Chroma automatiquement.
-- Les **sources** utilisées pour générer la réponse sont affichées sous chaque message → transparence sur ce que le LLM a utilisé pour répondre.
-- La **knowledge base** (`backend/knowledge/co2_facts.md`) contient des ordres de grandeur ADEME, comparaisons sectorielles et réglementations européennes — on peut y ajouter du contenu.
-
-### Exemples de questions à tester
-
-**En tant que Léa (consommateur)** :
-- "Quel est mon produit le plus émetteur ?"
-- "Compare les avocats et les pommes"
-- "Combien j'économise en achetant du chocolat noir au lieu de café ?"
-
-**En tant que Petite Marie Textile (entreprise)** :
-- "Quelle est l'étape la plus émettrice du T-shirt coton bio ?"
-- "Compare le T-shirt et le sweat coton bio"
-- "Que faire pour réduire l'empreinte de mes produits textiles ?"
-
-**En tant qu'admin** :
-- "Quel produit a la plus grande empreinte CO2 ?"
-- "Quelles entreprises utilisent le transport maritime ?"
-- "Donne-moi les ordres de grandeur ADEME pour l'électronique"
+> Sans token, le widget s'affiche mais répond "Le chatbot n'est pas configuré". Le reste de l'application fonctionne normalement.
 
 ---
 
@@ -202,44 +259,61 @@ cp .env.example .env
 tnsi_greenpath/
 ├── backend/
 │   ├── app/
-│   │   ├── main.py                # Point d'entrée FastAPI + bootstrap admin + CORS
+│   │   ├── main.py                # Assemblage FastAPI (SRP : CORS + routers uniquement)
+│   │   ├── startup.py             # Migrations + bootstrap admin/hashes/GS1 (SRP)
 │   │   ├── database.py            # Connexion SQLite + session SQLAlchemy
-│   │   ├── models.py              # Tables User, Product, Step
+│   │   ├── models.py              # 7 modèles : User, Product, Step, Batch, BatchParent,
+│   │   │                          #             ProductContributor, Consumption
 │   │   ├── schemas.py             # Schémas Pydantic + validations
 │   │   ├── dependencies.py        # get_current_user, require_admin
-│   │   ├── routers/
+│   │   ├── routers/               # 8 routers (HTTP uniquement, SRP)
 │   │   │   ├── auth.py            # /auth/login, /auth/me
-│   │   │   ├── users.py           # /users (admin seulement)
+│   │   │   ├── users.py           # /users (admin)
 │   │   │   ├── products.py        # /products (filtré par rôle)
-│   │   │   └── public.py          # /public/products/{id} (pour le QR code)
-│   │   └── services/
-│   │       ├── auth.py            # bcrypt + JWT
-│   │       └── co2.py             # Calcul d'empreinte carbone (facteurs ADEME)
-│   ├── requirements.txt
-│   └── greenpath.db               # SQLite (créé au runtime)
+│   │   │   ├── batches.py         # /batches (lots de production)
+│   │   │   ├── contributors.py    # /contributors (accès multi-entreprise)
+│   │   │   ├── consumption.py     # /consumption (historique consommateur)
+│   │   │   ├── chat.py            # /chat (GreenBot — délègue à services/chat.py)
+│   │   │   └── public.py          # /public/products/{id} (QR code)
+│   │   ├── services/              # Logique métier (SRP)
+│   │   │   ├── auth.py            # bcrypt + JWT
+│   │   │   ├── co2.py             # Calcul empreinte carbone (facteurs ADEME)
+│   │   │   ├── blockchain.py      # Hash SHA-256 + vérification de chaîne
+│   │   │   ├── gs1.py             # Génération GLN, GTIN, SSCC
+│   │   │   ├── rag.py             # ChromaDB : indexation + retrieval
+│   │   │   ├── llm.py             # Client LLM Hugging Face
+│   │   │   └── chat.py            # Pipeline RAG→LLM orchestrée (SRP)
+│   │   └── knowledge/
+│   │       └── co2_facts.md       # Base de connaissances ADEME pour le RAG
+│   ├── seed_demo.py               # Jeu de données démo (idempotent)
+│   └── requirements.txt
 │
-└── frontend/
-    ├── src/app/
-    │   ├── app.component.ts        # Shell avec barre de navigation + logout
-    │   ├── app.config.ts           # Providers (HttpClient + interceptor JWT)
-    │   ├── app.routes.ts           # Routes protégées par guards
-    │   ├── models/
-    │   │   ├── product.model.ts
-    │   │   └── auth.model.ts       # User, UserRole, LoginRequest, etc.
-    │   ├── services/
-    │   │   ├── product.service.ts
-    │   │   ├── user.service.ts     # CRUD users (admin only)
-    │   │   ├── auth.service.ts     # login, logout, currentUser signal
-    │   │   └── auth.interceptor.ts # ajoute le Bearer token + gère 401
-    │   ├── guards/
-    │   │   └── auth.guard.ts       # authGuard, adminGuard, guestGuard
-    │   └── components/
-    │       ├── login/              # Page de connexion
-    │       ├── product-form/       # Création/édition d'un produit
-    │       ├── product-list/       # Dashboard RSE (filtré selon rôle)
-    │       └── admin-users/        # Gestion des utilisateurs (admin only)
-    ├── angular.json
-    └── package.json
+├── frontend/
+│   └── src/app/
+│       ├── app.component.ts        # Shell + barre de navigation globale
+│       ├── app.config.ts           # Providers (HttpClient + intercepteur JWT)
+│       ├── app.routes.ts           # Routes protégées par guards
+│       ├── models/
+│       │   ├── product.model.ts
+│       │   └── auth.model.ts
+│       ├── services/
+│       │   ├── product.service.ts
+│       │   ├── user.service.ts
+│       │   ├── auth.service.ts
+│       │   └── auth.interceptor.ts
+│       ├── guards/
+│       │   └── auth.guard.ts       # authGuard, adminGuard, guestGuard
+│       └── components/
+│           ├── landing/            # Page vitrine publique
+│           ├── login/              # Page de connexion
+│           ├── product-form/       # Création/édition produit + étapes DAG
+│           ├── product-list/       # Dashboard RSE
+│           ├── product-timeline/   # Visualisation DAG de la supply chain
+│           ├── product-public/     # Page consommateur QR code (/p/{id})
+│           ├── admin-users/        # Gestion utilisateurs (admin)
+│           └── chatbot/            # Widget GreenBot
+│
+└── start.py                        # Script de démarrage unifié (backend + frontend)
 ```
 
 ---
@@ -253,7 +327,7 @@ git clone https://github.com/MaxanceV/tnsi_greenpath
 cd tnsi_greenpath
 ```
 
-### 2. Installation des dépendances (à faire une seule fois)
+### 2. Installer les dépendances (une seule fois)
 
 ```bash
 # Backend
@@ -270,24 +344,17 @@ npm install
 cd ..
 ```
 
-### 3. Lancement en une commande (RECOMMANDÉ)
-
-Une fois les dépendances installées, **un seul script** suffit pour tout démarrer :
+### 3. Lancer l'application
 
 ```bash
-./start.sh        # macOS / Linux
-start.bat         # Windows (double-clic dessus, ou taper dans cmd)
+python start.py
 ```
 
-Ce script :
-- détecte si la base de données est vide → exécute le **seed** automatiquement (3 entreprises, 9 produits, 2 consommateurs dont Léa avec un panier rempli)
-- démarre le **backend** (FastAPI sur `localhost:8000`, accessible aussi sur l'IP LAN)
+Le script :
+- détecte si la base de données est vide → exécute le **seed** automatiquement
+- démarre le **backend** (FastAPI sur `localhost:8000`)
 - démarre le **frontend** (Angular sur `localhost:4200`)
 - affiche les URLs et les comptes démo
-- redirige les logs dans `logs/backend.log` et `logs/frontend.log`
-- arrête proprement les deux serveurs sur `Ctrl+C`
-
-À l'écran tu verras :
 
 ```
 ========================================================================
@@ -296,232 +363,124 @@ Ce script :
   Backend  : http://localhost:8000
   Swagger  : http://localhost:8000/docs
 
-  Comptes démo :
-    Admin        admin@greenpath.com         / admin123
-    Entreprise   petitemarie@demo.greenpath  / demo123
-    Consommateur lea@demo.greenpath          / demo123  (avec panier rempli)
+  Comptes démo (mot de passe : demo123) :
+    Admin        admin@greenpath.com
+    Entreprise   petitemarie@demo.greenpath   (Petite Marie Textile)
+    Consommateur lea@demo.greenpath           (panier rempli)
 ========================================================================
 ```
 
-### Lancement manuel (alternative, pour debug ou contrôle fin)
-
-Si tu préfères lancer les deux serveurs séparément (deux terminaux) :
-
-#### Backend (FastAPI)
+### Lancement manuel (deux terminaux)
 
 ```bash
+# Terminal 1 — Backend
 cd backend
-source .venv/bin/activate              # macOS / Linux
-# .venv\Scripts\activate               # Windows
+source .venv/bin/activate
 uvicorn app.main:app --reload --host 0.0.0.0
+
+# Terminal 2 — Frontend
+cd frontend
+npm start
 ```
 
-- API : http://localhost:8000
-- Documentation Swagger interactive : **http://localhost:8000/docs**
-- Au premier démarrage, l'admin par défaut est créé (cf. section auth ci-dessus).
-
-#### Données de démonstration (optionnel — fait automatiquement par `start.sh`)
-
-Si tu veux peupler la BDD manuellement (9 produits réalistes, 6 entreprises, 2 consommateurs dont Léa avec son panier rempli) :
+### Données de démonstration
 
 ```bash
 # Dans backend/, venv activé
 python seed_demo.py
 ```
 
-Le script est **idempotent** : tu peux le relancer sans risquer de doublons.
+Jeu de données idempotent : 6 entreprises, 9 produits, 2 consommateurs (Léa avec 8 produits scannés, Tom avec 3).
 
-| Compte démo (mot de passe `demo123`) | Type | Détail |
+| Compte (mot de passe `demo123`) | Type | Entreprise |
 |---|---|---|
-| `petitemarie@demo.greenpath` | Entreprise | Petite Marie Textile (T-shirt + Sweat coton bio) |
-| `biobuzz@demo.greenpath` | Entreprise | BioBuzz Confitures (Confiture + Jus d'orange) |
+| `petitemarie@demo.greenpath` | Entreprise | Petite Marie Textile |
+| `biobuzz@demo.greenpath` | Entreprise | BioBuzz Confitures |
 | `chocoprovence@demo.greenpath` | Entreprise | Chocolaterie Provençale |
 | `cafe@demo.greenpath` | Entreprise | Maison du Café |
-| `vergers@demo.greenpath` | Entreprise | Vergers Provence (Pommes + Avocats) |
-| `domaine@demo.greenpath` | Entreprise | Domaine Bio Bordeaux (Vin) |
-| `lea@demo.greenpath` | Consommateur | Léa Dupont, 8 produits scannés |
-| `tom@demo.greenpath` | Consommateur | Tom Martin, 3 produits scannés |
-
-#### Frontend (Angular)
-
-Dans **un autre terminal** :
-
-```bash
-cd frontend
-npm start
-```
-
-- Application : **http://localhost:4200**
-- Tu seras redirigé vers `/login`. Utilise `admin@greenpath.com` / `admin123`.
-
-### 4. Accéder depuis un autre appareil sur le même Wi-Fi (téléphone, ordi voisin)
-
-L'application est conçue pour fonctionner sur le **réseau local** — indispensable pour scanner les QR codes depuis un téléphone pendant la démo.
-
-Trois étapes à respecter :
-
-1. Lancer les deux serveurs **avec l'option `--host 0.0.0.0`** (déjà gérée dans le `npm start` ; pour uvicorn cf. commande ci-dessus)
-2. Autoriser les connexions entrantes dans le **pare-feu** de l'OS hôte
-3. Récupérer l'IP LAN de l'ordi hôte et l'ouvrir depuis le téléphone : `http://<IP-LAN>:4200`
-
-#### A. Trouver son IP LAN
-
-| OS | Commande |
-|---|---|
-| **macOS** | `ipconfig getifaddr en0` (Wi-Fi) ou `ipconfig getifaddr en1` |
-| **Linux** | `hostname -I` ou `ip addr show` |
-| **Windows (cmd / PowerShell)** | `ipconfig` puis chercher **IPv4** sous la section "Carte réseau sans fil Wi-Fi" |
-
-L'IP attendue ressemble à `192.168.x.x`, `10.x.x.x` ou `172.16-31.x.x`.
-
-> Un script pratique pour macOS / Linux : `./scripts/show-lan-url.sh` (affiche directement les URLs à partager).
-
-#### B. Autoriser les connexions entrantes (pare-feu) — la cause #1 des problèmes
-
-##### Windows (le plus piégeux)
-
-À la **toute première fois** que tu lances `uvicorn` puis `npm start`, Windows affiche une popup :
-
-> *Voulez-vous autoriser Python à communiquer sur ces réseaux ?*
-
-**IMPORTANT** : cocher **"Réseaux privés"** (au minimum) puis **Autoriser**. Pareil pour Node.
-
-Si tu as raté la popup ou cliqué *Annuler* :
-
-1. *Paramètres → Confidentialité et sécurité → Sécurité Windows → Pare-feu et protection du réseau*
-2. *Autoriser une application via le pare-feu*
-3. Cliquer *Modifier les paramètres* (admin) puis *Autoriser une autre application*
-4. Ajouter `python.exe` (celui de ton `.venv`) et `node.exe` → cocher **Privé**
-5. Valider, relancer les serveurs
-
-Alternative rapide (pas idéale en termes de sécurité, OK le temps de la démo) : désactiver complètement le pare-feu pour le profil **Privé**.
-
-##### macOS
-
-À la première écoute, macOS peut demander si Python / Node peut accepter les connexions entrantes → **Autoriser**.
-
-Si déjà refusé ou pas demandé :
-
-1. *Réglages Système → Réseau → Pare-feu → Options…*
-2. Vérifier que Python (celui du venv) et Node sont sur **"Autoriser les connexions entrantes"**
-
-Alternative pour la démo : désactiver complètement le pare-feu (*Réglages Système → Réseau → Pare-feu* → Off).
-
-##### Linux (Ubuntu / Debian — ufw)
-
-```bash
-sudo ufw allow 4200/tcp
-sudo ufw allow 8000/tcp
-# Ou si ufw n'est pas actif, il n'y a probablement rien à faire.
-```
-
-Pour vérifier : `sudo ufw status`.
-
-#### C. Tester la connectivité
-
-Sur l'appareil hôte, dans un terminal :
-
-```bash
-# Remplace par ton IP LAN
-curl http://192.168.1.42:8000/
-# Doit renvoyer : {"status":"GreenPath Backend en ligne"}
-```
-
-Depuis le téléphone, ouvre le navigateur et tape : `http://192.168.1.42:4200`
-
-**Si tout va bien** → tu vois la page de login GreenPath, identique à celle de l'ordi.
-
-#### D. Tester le QR code
-
-1. Sur l'ordi hôte, ouvre le navigateur **à l'adresse LAN** : `http://192.168.1.42:4200` (PAS `localhost:4200`)
-2. Connecte-toi en admin, choisis un produit, clique **QR code**
-3. Le QR généré encode `http://192.168.1.42:4200/p/<id>` → scannable par le téléphone
-
-> Si tu génères le QR depuis `localhost:4200`, il encodera `localhost:4200/p/<id>` qui ne fonctionnera pas depuis le téléphone. **Toujours générer les QR depuis l'IP LAN**.
-
-#### E. Cas où ça ne marchera jamais (Wi-Fi public / eduroam / cafés)
-
-Beaucoup de Wi-Fi publics activent une protection appelée **client isolation** (ou *AP isolation*) : les appareils connectés peuvent accéder à Internet mais **pas se voir entre eux**. C'est le cas de :
-
-- Eduroam (variable selon l'établissement, souvent isolé)
-- Wi-Fi des hôtels, cafés, gares
-- Certains hotspots d'opérateur
-
-Test rapide : depuis le téléphone, faire `ping <IP-de-l-ordi>`. Si ça ne répond pas → client isolation, rien à faire côté code.
-
-**Solutions** :
-- Utiliser le **partage de connexion d'un téléphone** comme point d'accès commun (le plus fiable pour les démos itinérantes)
-- Apporter sa propre **mini box Wi-Fi**
-- Utiliser un **tunnel internet** (ngrok, Cloudflare Tunnel) — me demander si tu veux qu'on l'ajoute
+| `vergers@demo.greenpath` | Entreprise | Vergers Provence |
+| `domaine@demo.greenpath` | Entreprise | Domaine Bio Bordeaux |
+| `lea@demo.greenpath` | Consommateur | — |
+| `tom@demo.greenpath` | Consommateur | — |
 
 ---
 
 ## API REST
 
-Toutes les routes sont documentées et testables sur http://localhost:8000/docs.
+Documentation interactive : **http://localhost:8000/docs**
 
 ### Auth
 
 | Méthode | URL | Auth | Description |
 |---|---|---|---|
-| `POST` | `/auth/login` | Public | Échange email/password contre un JWT |
-| `GET` | `/auth/me` | Connecté | Infos de l'utilisateur courant |
+| `POST` | `/auth/login` | Public | Email/password → JWT |
+| `GET` | `/auth/me` | Connecté | Infos utilisateur courant |
 
-### Produits (filtrés automatiquement par rôle)
+### Produits
 
 | Méthode | URL | Auth | Description |
 |---|---|---|---|
-| `POST` | `/products` | Connecté | Créer un produit (le `owner_id` est l'utilisateur connecté) |
-| `GET` | `/products` | Connecté | Lister ses produits (admin : tous) |
-| `GET` | `/products/{id}` | Connecté | Détail (403 si pas propriétaire et pas admin) |
-| `PUT` | `/products/{id}` | Connecté | Mettre à jour |
+| `POST` | `/products` | Connecté | Créer un produit |
+| `GET` | `/products` | Connecté | Lister (filtré par rôle) |
+| `GET` | `/products/{id}` | Connecté | Détail |
+| `PUT` | `/products/{id}` | Connecté | Modifier |
 | `DELETE` | `/products/{id}` | Connecté | Supprimer |
-| `GET` | `/products/stats/summary` | Connecté | KPIs du dashboard (filtrés par rôle) |
+| `GET` | `/products/stats/summary` | Connecté | KPIs dashboard |
+| `GET` | `/products/{id}/qrcode` | Connecté | Générer le QR code |
 
-### Utilisateurs (admin uniquement)
+### Lots (Batches)
 
 | Méthode | URL | Description |
 |---|---|---|
-| `GET` | `/users` | Lister tous les utilisateurs |
+| `GET` | `/batches?product_id={id}` | Lots d'un produit |
+| `POST` | `/batches` | Créer un lot |
+| `PUT` | `/batches/{id}` | Modifier un lot |
+| `DELETE` | `/batches/{id}` | Supprimer un lot |
+
+### Contributeurs
+
+| Méthode | URL | Description |
+|---|---|---|
+| `GET` | `/contributors?product_id={id}` | Contributeurs d'un produit |
+| `POST` | `/contributors` | Déléguer l'accès à une entreprise |
+| `DELETE` | `/contributors/{product_id}/{user_id}` | Révoquer l'accès |
+
+### Consommation
+
+| Méthode | URL | Description |
+|---|---|---|
+| `GET` | `/consumption` | Historique du consommateur connecté |
+| `POST` | `/consumption` | Ajouter un produit scanné |
+| `DELETE` | `/consumption/{id}` | Retirer un produit du suivi |
+
+### Chatbot
+
+| Méthode | URL | Description |
+|---|---|---|
+| `POST` | `/chat` | Question → réponse + sources |
+
+### Utilisateurs (admin)
+
+| Méthode | URL | Description |
+|---|---|---|
+| `GET` | `/users` | Tous les utilisateurs |
 | `POST` | `/users` | Créer un utilisateur |
-| `PUT` | `/users/{id}` | Modifier (entreprise, rôle, mot de passe) |
-| `DELETE` | `/users/{id}` | Supprimer (impossible de se supprimer soi-même) |
+| `PUT` | `/users/{id}` | Modifier |
+| `DELETE` | `/users/{id}` | Supprimer |
 
-### Public (pour la future page consommateur du QR code)
+### Public
 
 | Méthode | URL | Description |
 |---|---|---|
-| `GET` | `/public/products/{id}` | Détail public d'un produit, sans authentification |
-
-### Exemple : se connecter et créer un produit
-
-```bash
-# 1. Login → récupère le token
-TOKEN=$(curl -s -X POST http://localhost:8000/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"admin@greenpath.com","password":"admin123"}' \
-  | grep -oE '"access_token":"[^"]+' | cut -d'"' -f4)
-
-# 2. Créer un produit avec le token
-curl -X POST http://localhost:8000/products \
-  -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "name": "T-shirt coton bio",
-    "steps": [
-      { "position": 1, "name": "Culture", "step_type": "matiere_premiere", "weight_kg": 0.3, "location": "Inde" },
-      { "position": 2, "name": "Livraison", "step_type": "transport", "weight_kg": 0.3, "transport_mode": "bateau", "distance_km": 8000 }
-    ]
-  }'
-```
+| `GET` | `/public/products/{id}` | Détail produit sans auth (QR code) |
 
 ---
 
-## Calcul CO₂ (facteurs ADEME mockés)
+## Calcul CO₂ (facteurs ADEME)
 
-Le calcul se fait dans `backend/app/services/co2.py`.
+Le calcul est dans `backend/app/services/co2.py` — jamais stocké en base.
 
-**Transport** : kg CO₂ par tonne·km
+**Transport** (kg CO₂ par tonne·km) :
 
 | Mode | Facteur |
 |---|---|
@@ -531,7 +490,7 @@ Le calcul se fait dans `backend/app/services/co2.py`.
 | Bateau | 0.015 |
 | Aucun | 0.0 |
 
-**Production / matière** (si l'étape n'a pas de transport) : kg CO₂ par kg
+**Production / matière** (kg CO₂ par kg, si pas de transport) :
 
 | Type | Facteur |
 |---|---|
@@ -539,101 +498,58 @@ Le calcul se fait dans `backend/app/services/co2.py`.
 | Fabrication | 5.0 |
 | Distribution | 0.2 |
 
-**Règle** : si une étape a `distance_km > 0` ET un `transport_mode` (≠ aucun), on calcule un CO₂ de transport. Sinon on applique le facteur de base lié au `step_type`.
+---
+
+## Accès LAN (téléphone / autre appareil)
+
+L'application est conçue pour fonctionner sur réseau local — indispensable pour scanner les QR codes depuis un téléphone.
+
+**Prérequis :** lancer les serveurs avec `--host 0.0.0.0` (déjà géré par `npm start` et `python start.py`).
+
+**Trouver son IP LAN :**
+
+| OS | Commande |
+|---|---|
+| macOS | `ipconfig getifaddr en0` |
+| Linux | `hostname -I` |
+| Windows | `ipconfig` → IPv4 Wi-Fi |
+
+**Tester :** `curl http://<IP-LAN>:8000/` → `{"status":"GreenPath Backend en ligne"}`
+
+**QR code :** générer le QR depuis le navigateur ouvert sur l'IP LAN (pas `localhost`) — le QR encode l'URL à laquelle il est généré.
+
+**Wi-Fi public (eduroam, hôtels) :** client isolation souvent activé → les appareils ne se voient pas. Solution : utiliser le **partage de connexion d'un téléphone** comme point d'accès.
 
 ---
 
-## Vues selon le rôle
+## Architecture SOLID
 
-### Vue Entreprise (rôle `entreprise`)
-- Voit uniquement ses propres produits dans le dashboard
-- Peut créer, modifier, supprimer **ses** produits
-- Les KPIs (CO₂ moyen, total) sont calculés sur ses produits uniquement
-- N'a pas accès à `/admin/users` (redirigé vers `/products`)
+Le backend respecte le principe de responsabilité unique (SRP) :
 
-### Vue Super Admin (rôle `admin`)
-- Voit **tous les produits de toutes les entreprises** dans le dashboard
-- Une colonne "Entreprise" apparaît sur chaque ligne
-- A accès au lien **"Utilisateurs"** dans la barre de navigation
-- Peut créer / modifier / supprimer des utilisateurs et changer leur rôle
-- Ne peut pas se retirer son propre rôle admin ni se supprimer (garde-fou)
-
-### Vue Publique (non connecté)
-- Aucun accès au dashboard (redirigé vers `/login`)
-- Accès en lecture seule à `/public/products/{id}` (utilisé par le QR code consommateur)
-- La page consommateur frontend est en cours (Marie)
-
----
-
-## Fonctionnalités déjà implémentées
-
-### Saisie produit + étapes (Baptiste)
-- Formulaire Angular avec étapes dynamiques (ajouter/supprimer/réordonner)
-- Validation côté front (Reactive Forms) **et** côté back (Pydantic)
-
-### Dashboard RSE (Justine)
-- 4 KPIs en cartes (auto-filtrés selon rôle)
-- Liste avec colonne CO₂ (+ colonne Entreprise visible uniquement par l'admin)
-- Modale de détail avec barre de répartition multicolore
-- Recherche textuelle + filtres avancés (type, transport, fournisseur, lieu, poids, distance, CO₂) dans une modale dédiée
-- Chips de filtres actifs retirables
-
-### Authentification et rôles
-- Login JWT, intercepteur HTTP, guards de routes
-- Vues filtrées automatiquement par `owner_id` côté backend
-- Page admin de gestion des utilisateurs (création, édition, changement de rôle, suppression)
-- Endpoint public pour la future page consommateur
-
----
-
-## Reste à faire (V2 / autres binômes)
-
-- **Page publique consommateur** (Marie) : URL `/p/{id}` accessible via QR code, design simplifié
-- **Génération de QR code** (Ferdinand) : un QR par produit pointant vers la page publique
-- **Fake blockchain** (Ferdinand) : hash SHA-256 par étape, badge « Vérifié »
-- **Jeu de données démo** (Maxance) : 3 produits réalistes pour la démo
-- **Tests** (Maxance) : Pytest sur CO₂ et validation
-- **Sécurité prod** (Abdrahamane) : `SECRET_KEY` en variable d'environnement, durée de token configurable, refresh token éventuellement
-
----
-
-## Conventions de code
-
-- **Python** : PEP 8, type hints partout, logique métier dans `services/`, validations dans Pydantic.
-- **TypeScript / Angular** : composants standalone, `inject()`, **signals** pour l'état réactif, Reactive Forms.
-- **Git** : `feature/<nom>`. PR avec relecture avant merge sur `main`.
+| Fichier | Responsabilité |
+|---|---|
+| `main.py` | Assemblage de l'application (CORS + routers) |
+| `startup.py` | Migrations DB + bootstrap données |
+| `routers/*.py` | Validation HTTP + dépendances FastAPI uniquement |
+| `services/co2.py` | Calcul CO₂ |
+| `services/blockchain.py` | Hashing SHA-256 |
+| `services/gs1.py` | Génération identifiants GS1 |
+| `services/rag.py` | Indexation + retrieval ChromaDB |
+| `services/llm.py` | Client LLM Hugging Face |
+| `services/chat.py` | Pipeline RAG→LLM orchestrée |
 
 ---
 
 ## Dépannage rapide
 
-### Installation / dépendances
-
 | Problème | Solution |
 |---|---|
-| `npm install` échoue avec `EACCES` sur le cache | `npm install --cache /tmp/npm-cache` |
-| `passlib` plante avec `password cannot be longer than 72 bytes` | Vérifier que `bcrypt<4.1` est bien installé (`pip install "bcrypt<4.1"`) |
-| **Windows** : `pip install` plante sur `bcrypt` ou `Pillow` avec `Microsoft Visual C++ 14.0 required` | Utiliser **Python 3.11 ou 3.12** (les roues précompilées existent). Python 3.13 manque encore certaines roues. |
-| **Windows** : `source .venv/bin/activate` introuvable | Sur Windows c'est `.venv\Scripts\activate` (cmd) ou `.venv\Scripts\Activate.ps1` (PowerShell) |
-| `greenpath.db` corrompu / je veux repartir à zéro | Supprimer le fichier `backend/greenpath.db` (l'admin sera re-créé) |
-
-### Runtime
-
-| Problème | Solution |
-|---|---|
-| Login refusé alors que je connais le password | Si tu as ajouté un user "à la main" en SQL, son password n'est pas hashé — recrée-le via l'API |
-| Front bloqué sur le login en boucle | Le token a expiré (24h) → re-login. Si ça persiste, vide le `localStorage` du navigateur |
-| Je veux changer la `SECRET_KEY` du JWT | Modifier `backend/app/services/auth.py`. En prod, à mettre en variable d'env |
-| Un produit n'affiche pas de CO₂ | Vérifier `weight_kg > 0`, et soit `step_type` valide, soit `transport_mode + distance_km` |
-| Erreur CORS `localhost:4200` | Vérifier que le backend tourne et que CORS est ouvert sur `localhost:4200` dans `main.py` |
-
-### Accès LAN (autre appareil sur le même Wi-Fi)
-
-| Problème | Solution |
-|---|---|
-| Le téléphone n'arrive pas à charger la page (timeout) | Vérifier que le backend ET le frontend sont lancés avec `--host 0.0.0.0` (déjà fait dans `npm start` ; à ajouter manuellement pour uvicorn : `uvicorn app.main:app --reload --host 0.0.0.0`) |
-| **macOS** : autre appareil ne joint pas le Mac | Le pare-feu macOS bloque par défaut. Réglages → Réseau → Pare-feu → désactiver, ou autoriser Python/Node spécifiquement |
-| **Windows** : autre appareil ne joint pas le PC | À la première écoute, Windows affiche une popup "Autoriser Python sur les réseaux privés" → cocher **Privé**. Si raté : Paramètres → Pare-feu → Autoriser une application → cocher Python |
-| Wi-Fi public / eduroam : aucun appareil ne joint l'autre | **Client isolation** activé (sécurité réseau). Impossible à contourner sans changer de réseau. Solution : utiliser un **partage de connexion téléphone** comme point d'accès commun |
-| Page chargée mais erreur au login / CORS | Vérifier que tu accèdes au front avec l'IP LAN, pas `localhost`. Le front dérive l'URL backend de l'URL utilisée. |
-| Le QR code scanné depuis le téléphone ouvre `localhost:4200` (qui ne marche pas) | Le QR encode l'`Origin` de la requête. Il faut **régénérer** le QR depuis le navigateur ouvert sur l'IP LAN (pas `localhost`). |
+| `npm install` échoue avec `EACCES` | `npm install --cache /tmp/npm-cache` |
+| **Windows** : `pip install` échoue sur `bcrypt` / `Pillow` | Utiliser Python 3.11 ou 3.12 (roues précompilées disponibles) |
+| **Windows** : `source .venv/bin/activate` introuvable | `.venv\Scripts\activate` (cmd) ou `.venv\Scripts\Activate.ps1` (PowerShell) |
+| `greenpath.db` corrompu | Supprimer `backend/greenpath.db` — l'admin sera recréé au démarrage |
+| Login refusé (mot de passe connu) | Si l'utilisateur a été créé directement en SQL, son mot de passe n'est pas hashé — recrée-le via l'API |
+| Front bloqué en boucle sur le login | Token expiré (24h) → re-login. Si ça persiste : vider le `localStorage` du navigateur |
+| GreenBot répond "non configuré" | Ajouter `HF_TOKEN=hf_...` dans `backend/.env` |
+| Un produit n'affiche pas de CO₂ | Vérifier `weight_kg > 0` et soit `step_type` valide, soit `transport_mode + distance_km` |
+| Erreur CORS `localhost:4200` | Vérifier que le backend tourne sur le port 8000 |
