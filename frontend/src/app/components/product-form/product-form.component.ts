@@ -35,17 +35,6 @@ const uniquePositionsValidator: ValidatorFn = (
   return dup ? { duplicatePositions: true } : null;
 };
 
-/**
- * Formulaire de création / édition d'un produit et de ses étapes.
- *
- * - Mode création : route `/products/new`, démarre avec une étape vide.
- * - Mode édition  : route `/products/:id/edit`, charge le produit existant.
- *
- * En mode édition, deux sections supplémentaires sont disponibles :
- * - Sélecteur "Produit source" dans chaque étape (upstream_product_id)
- * - Gestion des contributeurs : inviter une entreprise tierce par email,
- *   consulter la liste des accès, révoquer un accès.
- */
 @Component({
   selector: 'app-product-form',
   standalone: true,
@@ -69,10 +58,8 @@ export class ProductFormComponent implements OnInit {
   submitting = false;
   serverError: string | null = null;
 
-  // Liste de tous les produits pour le sélecteur "produit source"
   allProducts: Product[] = [];
 
-  // Gestion des contributeurs (mode édition uniquement)
   contributors: Contributor[] = [];
   contributorEmail = '';
   contributorScope = 'write';
@@ -92,7 +79,6 @@ export class ProductFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Charger tous les produits pour le sélecteur upstream
     this.productService.list().subscribe({
       next: (products) => (this.allProducts = products),
       error: () => {},
@@ -130,8 +116,6 @@ export class ProductFormComponent implements OnInit {
     });
   }
 
-  // ── Contributeurs ────────────────────────────────────────────────────────
-
   private loadContributors(productId: number): void {
     this.productService.getContributors(productId).subscribe({
       next: (list) => (this.contributors = list),
@@ -151,13 +135,13 @@ export class ProductFormComponent implements OnInit {
         next: (c) => {
           this.contributors.push(c);
           this.contributorEmail = '';
-          this.contributorSuccess = `${c.company_name} a bien été ajouté.`;
+          this.contributorSuccess = c.company_name + ' a bien ete ajoute.';
           this.contributorLoading = false;
         },
         error: (err) => {
           const detail = err?.error?.detail;
           this.contributorError =
-            typeof detail === 'string' ? detail : 'Impossible d\'ajouter ce contributeur.';
+            typeof detail === 'string' ? detail : "Impossible d'ajouter ce contributeur.";
           this.contributorLoading = false;
         },
       });
@@ -172,8 +156,6 @@ export class ProductFormComponent implements OnInit {
       error: () => {},
     });
   }
-
-  // ── Formulaire étapes ─────────────────────────────────────────────────────
 
   private buildStepGroup(values?: Partial<{
     position: number;
@@ -209,13 +191,11 @@ export class ProductFormComponent implements OnInit {
     });
   }
 
-  /** Vérifie si une position est sélectionnée comme parent d'un step */
   isParentSelected(stepCtrl: AbstractControl, parentPos: number): boolean {
     const parents: number[] = stepCtrl.get('parent_positions')?.value ?? [];
     return parents.includes(parentPos);
   }
 
-  /** Ajoute / retire une position parente du control parent_positions */
   toggleParent(stepCtrl: AbstractControl, parentPos: number, event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
     const ctrl = stepCtrl.get('parent_positions');
@@ -259,14 +239,12 @@ export class ProductFormComponent implements OnInit {
     return control.touched && control.hasError(error);
   }
 
-  // ── Soumission ────────────────────────────────────────────────────────────
-
   submit(): void {
     this.serverError = null;
     if (this.form.invalid || this.steps.length === 0) {
       this.form.markAllAsTouched();
       if (this.steps.length === 0) {
-        this.serverError = 'Ajoutez au moins une étape';
+        this.serverError = 'Ajoutez au moins une etape';
       }
       return;
     }
@@ -307,17 +285,12 @@ export class ProductFormComponent implements OnInit {
         this.submitting = false;
         const detail = err?.error?.detail;
         if (Array.isArray(detail)) {
-          this.serverError = detail.map((d: any) => `${d.loc?.join('.')}: ${d.msg}`).join(' | ');
+          this.serverError = detail.map((d: any) => d.loc?.join('.') + ': ' + d.msg).join(' | ');
         } else if (typeof detail === 'string') {
           this.serverError = detail;
         } else {
-          this.serverError = 'Erreur lors de l\'enregistrement';
+          this.serverError = "Erreur lors de l'enregistrement";
         }
-      },
-    });
-  }
-}
-
       },
     });
   }

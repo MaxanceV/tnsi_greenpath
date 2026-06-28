@@ -7,7 +7,7 @@ export type StepType =
 export type TransportMode = 'camion' | 'bateau' | 'avion' | 'train' | 'aucun';
 
 export const STEP_TYPE_LABELS: Record<StepType, string> = {
-  matiere_premiere: 'Matiere premiere',
+  matiere_premiere: 'Matière première',
   fabrication: 'Fabrication',
   transport: 'Transport',
   distribution: 'Distribution',
