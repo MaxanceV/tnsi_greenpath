@@ -5,13 +5,6 @@ import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
 import { Contributor, DashboardStats, Product, ProductPayload } from '../models/product.model';
 
-/**
- * Client HTTP de l'API produits.
- *
- * Toutes les méthodes de CRUD sont automatiquement authentifiées via
- * l'intercepteur HTTP global. La méthode `getPublic` cible l'endpoint
- * public utilisé par la page consommateur (accessible via QR code).
- */
 @Injectable({ providedIn: 'root' })
 export class ProductService {
   private readonly http = inject(HttpClient);
@@ -46,14 +39,16 @@ export class ProductService {
     return this.http.get<Product>(`${this.publicUrl}/${id}`);
   }
 
-  // ── Contributeurs ────────────────────────────────────────────────────────
+  searchPublic(q: string): Observable<Product[]> {
+    return this.http.get<Product[]>(`${this.publicUrl}/search`, { params: { q: q } });
+  }
 
   getContributors(productId: number): Observable<Contributor[]> {
     return this.http.get<Contributor[]>(`${this.baseUrl}/${productId}/contributors`);
   }
 
   addContributor(productId: number, email: string, scope: string): Observable<Contributor> {
-    return this.http.post<Contributor>(`${this.baseUrl}/${productId}/contributors`, { user_email: email, scope });
+    return this.http.post<Contributor>(`${this.baseUrl}/${productId}/contributors`, { user_email: email, scope: scope });
   }
 
   removeContributor(productId: number, userId: number): Observable<void> {

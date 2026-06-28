@@ -6,6 +6,7 @@ import { MyConsumptionComponent } from './components/my-consumption/my-consumpti
 import { ProductFormComponent } from './components/product-form/product-form.component';
 import { ProductListComponent } from './components/product-list/product-list.component';
 import { PublicProductComponent } from './components/public-product/public-product.component';
+import { PublicSearchComponent } from './components/public-search/public-search.component';
 import { SignupComponent } from './components/signup/signup.component';
 import {
   adminGuard,
@@ -18,7 +19,8 @@ import {
 export const routes: Routes = [
   { path: '', redirectTo: 'products', pathMatch: 'full' },
 
-  // Pages publiques (sans auth — accessibles via QR code)
+  // Pages publiques (sans auth)
+  { path: 'search', component: PublicSearchComponent },
   { path: 'p/:id', component: PublicProductComponent },
 
   // Auth
