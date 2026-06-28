@@ -184,7 +184,7 @@ export class ProductFormComponent implements OnInit {
     weight_kg: number;
     transport_mode: TransportMode | null;
     distance_km: number | null;
-    parallel_group: number | null;
+    parent_positions: number[];
     upstream_product_id: number | null;
     upstream_batch_id: number | null;
   }>): FormGroup {
@@ -203,10 +203,31 @@ export class ProductFormComponent implements OnInit {
       ],
       transport_mode: [values?.transport_mode ?? ''],
       distance_km: [values?.distance_km ?? null, [Validators.min(0)]],
-      parallel_group: [values?.parallel_group ?? null, [Validators.min(1)]],
+      parent_positions: [values?.parent_positions ?? []],
       upstream_product_id: [values?.upstream_product_id ?? null],
       upstream_batch_id: [values?.upstream_batch_id ?? null],
     });
+  }
+
+  /** Vérifie si une position est sélectionnée comme parent d'un step */
+  isParentSelected(stepCtrl: AbstractControl, parentPos: number): boolean {
+    const parents: number[] = stepCtrl.get('parent_positions')?.value ?? [];
+    return parents.includes(parentPos);
+  }
+
+  /** Ajoute / retire une position parente du control parent_positions */
+  toggleParent(stepCtrl: AbstractControl, parentPos: number, event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    const ctrl = stepCtrl.get('parent_positions');
+    if (!ctrl) return;
+    const current: number[] = [...(ctrl.value ?? [])];
+    if (checked && !current.includes(parentPos)) {
+      current.push(parentPos);
+    } else {
+      const idx = current.indexOf(parentPos);
+      if (idx > -1) current.splice(idx, 1);
+    }
+    ctrl.setValue(current.sort((a, b) => a - b));
   }
 
   addStep(): void {
@@ -265,8 +286,7 @@ export class ProductFormComponent implements OnInit {
         transport_mode: s.transport_mode || null,
         distance_km:
           s.distance_km === null || s.distance_km === '' ? null : Number(s.distance_km),
-        parallel_group:
-          s.parallel_group === null || s.parallel_group === '' ? null : Number(s.parallel_group),
+        parent_positions: Array.isArray(s.parent_positions) ? s.parent_positions.map(Number) : [],
         upstream_product_id: s.upstream_product_id ? Number(s.upstream_product_id) : null,
         upstream_batch_id: s.upstream_batch_id ? Number(s.upstream_batch_id) : null,
       })),
@@ -293,6 +313,11 @@ export class ProductFormComponent implements OnInit {
         } else {
           this.serverError = 'Erreur lors de l\'enregistrement';
         }
+      },
+    });
+  }
+}
+
       },
     });
   }

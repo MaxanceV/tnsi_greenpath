@@ -28,7 +28,7 @@ def step_to_read(step: models.Step) -> schemas.StepRead:
         id=step.id,
         product_id=step.product_id,
         position=step.position,
-        parallel_group=step.parallel_group,
+        parent_positions=step.parent_positions or [],
         name=step.name,
         step_type=step.step_type,
         supplier=step.supplier,
