@@ -6,10 +6,12 @@ Ces routes sont consommées par la page consommateur ouverte depuis un QR code
 """
 
 import io
+from typing import List
 
 import qrcode
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
@@ -46,6 +48,55 @@ def _detect_front_base_url(request: Request) -> str:
         return f"http://{host_only}:4200"
 
     return DEFAULT_FRONT_BASE_URL
+
+
+@router.get("/products/search", response_model=List[schemas.ProductRead])
+def search_products(
+    q: str = Query(default="", min_length=0),
+    db: Session = Depends(get_db),
+):
+    """Recherche publique de produits par nom, GTIN, description ou fournisseur/lieu."""
+    q = q.strip()
+    if not q:
+        return []
+
+    like = f"%{q}%"
+
+    # Produits matchant directement
+    from_products = (
+        db.query(models.Product)
+        .filter(
+            or_(
+                models.Product.name.ilike(like),
+                models.Product.gtin.ilike(like),
+                models.Product.description.ilike(like),
+            )
+        )
+        .all()
+    )
+
+    # Produits dont une étape matche le fournisseur ou le lieu
+    from_steps = (
+        db.query(models.Product)
+        .join(models.Step)
+        .filter(
+            or_(
+                models.Step.supplier.ilike(like),
+                models.Step.location.ilike(like),
+            )
+        )
+        .all()
+    )
+
+    # Fusion sans doublon, limite à 20
+    seen: set[int] = {p.id for p in from_products}
+    merged = list(from_products)
+    for p in from_steps:
+        if p.id not in seen:
+            merged.append(p)
+            seen.add(p.id)
+
+    return [product_to_read(p) for p in merged[:20]]
 
 
 @router.get("/products/{product_id}", response_model=schemas.ProductRead)
