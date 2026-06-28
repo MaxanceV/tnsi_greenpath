@@ -118,13 +118,84 @@ import {
             </div>
           </div>
 
-          <!-- Flèche entre les nœuds (sauf après le dernier) -->
-          <div class="timeline-arrow" *ngIf="!last" aria-hidden="true">
-            <div class="arrow-line"></div>
-            <svg class="arrow-head" width="10" height="16" viewBox="0 0 10 16" fill="none">
-              <path d="M0 0 L10 8 L0 16" stroke="#10b981" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
+          <!-- Connecteur entre nœuds (sauf après le dernier) -->
+          <ng-container *ngIf="!last">
+
+            <!-- Flèche simple : séquentiel → séquentiel -->
+            <div class="timeline-arrow"
+                 *ngIf="!group.isParallel && !stepGroups[i+1]?.isParallel"
+                 aria-hidden="true">
+              <div class="arrow-line"></div>
+              <svg class="arrow-head" width="10" height="16" viewBox="0 0 10 16" fill="none">
+                <path d="M0 0 L10 8 L0 16" stroke="#10b981" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+
+            <!-- Fork : séquentiel → parallèle (1 → N branches) -->
+            <div class="fork-merge-connector" aria-hidden="true"
+                 *ngIf="!group.isParallel && stepGroups[i+1]?.isParallel"
+                 [style.height.px]="connectorHeight(stepGroups[i+1].steps.length)">
+              <svg width="56" [attr.height]="connectorHeight(stepGroups[i+1].steps.length)"
+                   [attr.viewBox]="'0 0 56 ' + connectorHeight(stepGroups[i+1].steps.length)"
+                   fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Ligne entrante -->
+                <line x1="0" [attr.y1]="connectorHeight(stepGroups[i+1].steps.length)/2"
+                      x2="20" [attr.y2]="connectorHeight(stepGroups[i+1].steps.length)/2"
+                      stroke="#10b981" stroke-width="2"/>
+                <!-- Barre verticale -->
+                <line x1="20" [attr.y1]="branchY(stepGroups[i+1].steps.length, 0)"
+                      x2="20" [attr.y2]="branchY(stepGroups[i+1].steps.length, stepGroups[i+1].steps.length - 1)"
+                      stroke="#10b981" stroke-width="2"/>
+                <!-- Branches vers chaque carte -->
+                <ng-container *ngFor="let s of stepGroups[i+1].steps; let si = index">
+                  <line x1="20" [attr.y1]="branchY(stepGroups[i+1].steps.length, si)"
+                        x2="46" [attr.y2]="branchY(stepGroups[i+1].steps.length, si)"
+                        stroke="#10b981" stroke-width="2"/>
+                  <!-- Tête de flèche -->
+                  <path [attr.d]="'M' + 40 + ' ' + (branchY(stepGroups[i+1].steps.length, si)-6) + ' L' + 46 + ' ' + branchY(stepGroups[i+1].steps.length, si) + ' L' + 40 + ' ' + (branchY(stepGroups[i+1].steps.length, si)+6)"
+                        stroke="#10b981" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                </ng-container>
+              </svg>
+            </div>
+
+            <!-- Merge : parallèle → séquentiel (N → 1 branches) -->
+            <div class="fork-merge-connector" aria-hidden="true"
+                 *ngIf="group.isParallel && !stepGroups[i+1]?.isParallel"
+                 [style.height.px]="connectorHeight(group.steps.length)">
+              <svg width="56" [attr.height]="connectorHeight(group.steps.length)"
+                   [attr.viewBox]="'0 0 56 ' + connectorHeight(group.steps.length)"
+                   fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Branches depuis chaque carte -->
+                <ng-container *ngFor="let s of group.steps; let si = index">
+                  <line x1="0" [attr.y1]="branchY(group.steps.length, si)"
+                        x2="36" [attr.y2]="branchY(group.steps.length, si)"
+                        stroke="#10b981" stroke-width="2"/>
+                </ng-container>
+                <!-- Barre verticale -->
+                <line x1="36" [attr.y1]="branchY(group.steps.length, 0)"
+                      x2="36" [attr.y2]="branchY(group.steps.length, group.steps.length - 1)"
+                      stroke="#10b981" stroke-width="2"/>
+                <!-- Ligne sortante -->
+                <line x1="36" [attr.y1]="connectorHeight(group.steps.length)/2"
+                      x2="46" [attr.y2]="connectorHeight(group.steps.length)/2"
+                      stroke="#10b981" stroke-width="2"/>
+                <!-- Tête de flèche -->
+                <path [attr.d]="'M' + 40 + ' ' + (connectorHeight(group.steps.length)/2 - 6) + ' L' + 46 + ' ' + (connectorHeight(group.steps.length)/2) + ' L' + 40 + ' ' + (connectorHeight(group.steps.length)/2 + 6)"
+                      stroke="#10b981" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+
+            <!-- Parallèle → parallèle : merge puis fork direct -->
+            <div class="timeline-arrow"
+                 *ngIf="group.isParallel && stepGroups[i+1]?.isParallel"
+                 aria-hidden="true">
+              <div class="arrow-line"></div>
+              <svg class="arrow-head" width="10" height="16" viewBox="0 0 10 16" fill="none">
+                <path d="M0 0 L10 8 L0 16" stroke="#10b981" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+
+          </ng-container>
 
         </ng-container>
       </div>
@@ -350,6 +421,19 @@ import {
       flex-shrink: 0;
     }
 
+    /* ======= Connecteur fork / merge ======= */
+    .fork-merge-connector {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      overflow: visible;
+    }
+
+    .fork-merge-connector svg {
+      display: block;
+      overflow: visible;
+    }
+
     /* ======= Légende CO₂ ======= */
     .co2-summary {
       background: #f0fdf4;
@@ -422,6 +506,12 @@ import {
       .timeline-node {
         max-width: 100%;
         min-width: unset;
+      }
+
+      /* En mobile les connecteurs fork/merge ne sont pas affichés
+         (les étapes parallèles s'empilent de toute façon) */
+      .fork-merge-connector {
+        display: none;
       }
     }
   `],
@@ -505,6 +595,20 @@ export class ProductTimelineComponent implements OnChanges {
       distribution: '#ec4899',
     };
     return typeColors[step.step_type] ?? this.palette[step.position % this.palette.length];
+  }
+
+  /** Hauteur estimée du connecteur fork/merge pour N étapes parallèles */
+  connectorHeight(n: number): number {
+    const CARD_H = 110;  // hauteur estimée d'une carte
+    const CARD_GAP = 8;  // gap entre les cartes (.parallel-cards)
+    return n * CARD_H + (n - 1) * CARD_GAP;
+  }
+
+  /** Position Y du centre de la i-ème branche dans le SVG du connecteur */
+  branchY(n: number, i: number): number {
+    const CARD_H = 110;
+    const CARD_GAP = 8;
+    return i * (CARD_H + CARD_GAP) + CARD_H / 2;
   }
 
   percent(value: number, total: number): number {
