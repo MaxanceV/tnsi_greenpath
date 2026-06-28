@@ -83,6 +83,7 @@ export class ProductFormComponent implements OnInit {
   readonly form: FormGroup = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(120)]],
     description: ['', [Validators.maxLength(500)]],
+    gtin: ['', [Validators.maxLength(14), Validators.pattern(/^\d{14}$/)]],
     steps: this.fb.array([], { validators: uniquePositionsValidator }),
   });
 
@@ -114,6 +115,7 @@ export class ProductFormComponent implements OnInit {
         this.form.patchValue({
           name: product.name,
           description: product.description ?? '',
+          gtin: product.gtin ?? '',
         });
         this.steps.clear();
         for (const step of product.steps) {
@@ -252,6 +254,7 @@ export class ProductFormComponent implements OnInit {
     const payload = {
       name: raw.name.trim(),
       description: raw.description?.trim() || null,
+      gtin: raw.gtin?.trim() || null,
       steps: raw.steps.map((s: any) => ({
         position: s.position,
         name: s.name.trim(),
