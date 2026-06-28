@@ -71,6 +71,10 @@ import { ProductTimelineComponent } from '../product-timeline/product-timeline.c
               <p class="brand-line" *ngIf="p.owner">Proposé par <strong>{{ p.owner.company_name }}</strong></p>
               <h1 class="product-name">{{ p.name }}</h1>
               <p class="product-desc" *ngIf="p.description">{{ p.description }}</p>
+              <div *ngIf="p.gtin" class="gtin-row">
+                <span class="gtin-label">GTIN-14</span>
+                <code class="gtin-value">{{ p.gtin }}</code>
+              </div>
             </div>
           </section>
 
@@ -251,6 +255,9 @@ import { ProductTimelineComponent } from '../product-timeline/product-timeline.c
       .brand-line strong { font-weight: 600; }
       .product-name { margin: 0; font-size: 2rem; font-weight: 700; line-height: 1.2; }
       .product-desc { margin: 12px auto 0; max-width: 620px; opacity: 0.95; font-size: 1rem; line-height: 1.5; }
+      .gtin-row { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; padding: 4px 12px; }
+      .gtin-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.75; }
+      .gtin-value { font-family: monospace; font-size: 0.9rem; font-weight: 600; letter-spacing: 0.05em; }
 
       /* ---------- Carte CO2 ---------- */
       /* ---------- Bandeau d'action (consommateur) ---------- */

@@ -119,6 +119,7 @@ type SortKey = 'date_desc' | 'date_asc' | 'co2_desc' | 'co2_asc' | 'name_asc';
             <div class="meta">
               {{ p.steps.length }} étape(s)
               <span *ngIf="isAdmin() && p.owner" class="owner-tag">· {{ p.owner.company_name }}</span>
+              <span *ngIf="p.gtin" class="gtin-badge" title="GTIN-14 GS1">GTIN {{ p.gtin }}</span>
             </div>
           </div>
           <div class="co2">
@@ -464,6 +465,7 @@ type SortKey = 'date_desc' | 'date_asc' | 'co2_desc' | 'co2_asc' | 'name_asc';
       .desc { color: #4b5563; font-size: 0.9rem; }
       .meta { color: #6b7280; font-size: 0.8rem; margin-top: 4px; }
       .owner-tag { color: #065f46; font-weight: 500; }
+      .gtin-badge { display: inline-block; margin-left: 8px; padding: 1px 7px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 4px; font-size: 0.75rem; font-family: monospace; font-weight: 600; letter-spacing: 0.03em; }
       .co2 { text-align: right; min-width: 90px; }
       .co2-value { font-weight: 700; font-size: 1.2rem; color: #0f5132; }
       .co2-unit { font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; }

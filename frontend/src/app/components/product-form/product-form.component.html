@@ -24,6 +24,23 @@
         <textarea formControlName="description" rows="2" placeholder="Description courte (optionnel)"></textarea>
         <small class="error" *ngIf="hasError(form.get('description'), 'maxlength')">Maximum 500 caractères.</small>
       </label>
+
+      <label class="field">
+        <span>
+          GTIN-14 (code GS1)
+          <span class="field-hint" title="Global Trade Item Number — identifiant GS1 à 14 chiffres (ex: code-barres EAN-13 préfixé d'un 0)">ⓘ</span>
+        </span>
+        <input
+          type="text"
+          formControlName="gtin"
+          placeholder="Ex: 03614081748501"
+          maxlength="14"
+          pattern="\d{14}"
+        />
+        <small class="field-help">Optionnel — 14 chiffres, sans espaces ni tirets</small>
+        <small class="error" *ngIf="hasError(form.get('gtin'), 'pattern')">Le GTIN doit contenir exactement 14 chiffres.</small>
+        <small class="error" *ngIf="hasError(form.get('gtin'), 'maxlength')">Maximum 14 caractères.</small>
+      </label>
     </section>
 
     <!-- ── Étapes ──────────────────────────────────────────────────────── -->
