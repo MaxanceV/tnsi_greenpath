@@ -27,8 +27,8 @@ import { AuthService } from '../../services/auth.service';
 <section class="hero">
   <div class="hero-inner">
     <div class="hero-badge"><span class="dot"></span>Tracabilite GS1 · Blockchain SHA-256</div>
-    <h1>La supply chain,<br><em>transparente enfin.</em></h1>
-    <p class="hero-sub">GreenPath lie chaque produit a son histoire complete, de la matiere premiere jusqu au rayon, et la rend lisible en un scan.</p>
+    <h1>La supply chain,<br><em>enfin transparente.</em></h1>
+    <p class="hero-sub">GreenPath lie chaque produit à son histoire complète, de la matière première jusqu'au rayon, et la rend lisible en un scan.</p>
     <div class="hero-btns">
       <a routerLink="/search" class="btn-primary">Scanner un produit</a>
       <a href="mailto:contact&#64;greenpath.fr?subject=Devis GreenPath" class="btn-ghost">Je suis une entreprise</a>
@@ -45,9 +45,9 @@ import { AuthService } from '../../services/auth.service';
     <div class="phone">
       <div class="pscreen">
         <div class="phead"><svg width="12" height="12" viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="20" fill="#2da844"/><circle cx="20" cy="20" r="6" fill="white"/></svg> GreenPath</div>
-        <div class="pbadge">Tracabilite verifiee</div>
+        <div class="pbadge">Tracabilité vérifiée</div>
         <div class="pname">Tablette praline amande</div>
-        <div class="pco2">0.79 kg CO2 · 6 etapes</div>
+        <div class="pco2">0.79 kg CO2 · 6 étapes</div>
         <div class="pstep green">1 Cacao Ghana</div>
         <div class="pstep blue">3 Transport maritime</div>
         <div class="pstep purple">5 Fabrication</div>
@@ -62,8 +62,8 @@ import { AuthService } from '../../services/auth.service';
     <div class="cons-header">
       <div class="cons-text">
         <div class="label green">Pour les consommateurs</div>
-        <h2>Savoir d ou vient ce que vous achetez.</h2>
-        <p class="sub" style="margin-bottom:0">Un simple QR code sur l emballage suffit. Acces a l histoire complete du produit sans app, sans compte.</p>
+        <h2>Savoir d'où vient ce que vous achetez.</h2>
+        <p class="sub" style="margin-bottom:0">Un simple QR code sur l emballage suffit. Accès a l'histoire complète du produit sans app, sans compte.</p>
       </div>
       <div class="hex-wrap">
         <div class="hex-ring">
@@ -76,17 +76,17 @@ import { AuthService } from '../../services/auth.service';
     <div class="feat-grid" style="margin-top:40px">
       <div class="feat"><div class="ficon" style="background:#dcf5e2;color:#064e3b"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><h3>Origine garantie</h3><p>Chaque etape est enregistree et infalsifiable grace a une chaine de signatures cryptographiques.</p></div>
       <div class="feat"><div class="ficon" style="background:#dbeafe;color:#1e40af"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><h3>Empreinte carbone</h3><p>Visualisez l impact CO2 de chaque etape et comparez vos achats en toute connaissance de cause.</p></div>
-      <div class="feat"><div class="ficon" style="background:#fce7f3;color:#9d174d"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div><h3>Commerce equitable</h3><p>Identifiez les produits issus de filieres responsables et soutenez les producteurs locaux.</p></div>
+      <div class="feat"><div class="ficon" style="background:#fce7f3;color:#9d174d"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div><h3>Commerce équitable</h3><p>Identifiez les produits issus de filieres responsables et soutenez les producteurs locaux.</p></div>
       <div class="feat"><div class="ficon" style="background:#fef3c7;color:#92400e"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M18 14h.01M14 18h.01M18 18h.01"/></svg></div><h3>Standard GS1</h3><p>Base sur le GTIN-14, identifiant universel sur tous les codes-barres. Compatible tous smartphones.</p></div>
     </div>
     <div class="hiw">
-      <p class="hiw-title">Comment ca marche en 3 secondes</p>
+      <p class="hiw-title">Comment ça marche en 3 secondes</p>
       <div class="hiw-row">
-        <div class="hstep"><div class="hnum">1</div><h4>Scannez</h4><p>Le QR code sur l emballage</p></div>
+        <div class="hstep"><div class="hnum">1</div><h4>Scannez</h4><p>Le QR code sur l'emballage</p></div>
         <div class="harr">&#8594;</div>
-        <div class="hstep"><div class="hnum">2</div><h4>Decouvrez</h4><p>L histoire complete du produit</p></div>
+        <div class="hstep"><div class="hnum">2</div><h4>Découvrez</h4><p>L'histoire complète du produit</p></div>
         <div class="harr">&#8594;</div>
-        <div class="hstep"><div class="hnum">3</div><h4>Faites confiance</h4><p>Donnees signees cryptographiquement</p></div>
+        <div class="hstep"><div class="hnum">3</div><h4>Faites confiance</h4><p>Données signées cryptographiquement</p></div>
       </div>
     </div>
     <div class="center"><a routerLink="/search" class="btn-primary">Essayez maintenant</a></div>
@@ -97,15 +97,15 @@ import { AuthService } from '../../services/auth.service';
   <div class="inner biz-grid">
     <div>
       <div class="label" style="color:#a3e8b0">Pour les entreprises</div>
-      <h2 style="color:white">Differenciez-vous.<br>Prouvez vos engagements.</h2>
-      <p style="color:rgba(255,255,255,0.7);margin-bottom:24px">73% des consommateurs prets a payer plus pour un produit transparent. GreenPath est votre avantage competitif.</p>
+      <h2 style="color:white">Différenciez-vous.<br>Prouvez vos engagements.</h2>
+      <p style="color:rgba(255,255,255,0.7);margin-bottom:24px">73% des consommateurs prêts à payer plus pour un produit transparent. GreenPath est votre avantage compétitif.</p>
       <ul class="biz-list">
         <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Dashboard de gestion produits et supply chains</li>
         <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Multi-entreprises : invitez vos fournisseurs</li>
-        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Generation automatique de QR codes GS1</li>
-        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Calcul CO2 automatique par etape et par lot</li>
-        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Chaine blockchain SHA-256 infalsifiable</li>
-        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Conformite AGEC et Green Claims Directive UE</li>
+        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Génération automatique de QR codes GS1</li>
+        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Calcul CO2 automatique par étape et par lot</li>
+        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Chaîne blockchain SHA-256 infalsifiable</li>
+        <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Conformité AGEC et Green Claims Directive UE</li>
       </ul>
       <a href="mailto:contact&#64;greenpath.fr?subject=Devis GreenPath" class="btn-primary" style="margin-top:12px">Demander une demo gratuite</a>
     </div>
@@ -116,7 +116,7 @@ import { AuthService } from '../../services/auth.service';
         <div class="dc-bar-row"><span class="dc-bl">CO2 moyen</span><div class="dc-bar"><div class="dc-fill" style="width:62%"></div></div><span class="dc-bv">0.62 kg</span></div>
       </div>
       <div class="dash-card" style="margin-top:12px">
-        <div style="color:#a3e8b0;font-size:0.75rem;font-weight:700;margin-bottom:10px">Chaine verifiee</div>
+        <div style="color:#a3e8b0;font-size:0.75rem;font-weight:700;margin-bottom:10px">Chaîne vérifiée</div>
         <div class="dc-step"><div class="dc-dot" style="background:#2da844"></div>Cacao Ghana - signe</div>
         <div class="dc-step"><div class="dc-dot" style="background:#3b82f6"></div>Transport maritime - signe</div>
         <div class="dc-step"><div class="dc-dot" style="background:#8b5cf6"></div>Fabrication - signe</div>
@@ -127,9 +127,9 @@ import { AuthService } from '../../services/auth.service';
 
 <section class="section bg-white">
   <div class="inner">
-    <div class="label green">Fonctionnalites</div>
+    <div class="label green">Fonctionnalités</div>
     <h2>Tout ce que GreenPath inclut</h2>
-    <p class="sub">Une plateforme complete, de la creation du produit jusqu au scan du consommateur final.</p>
+    <p class="sub">Une plateforme complète, de la création du produit jusqu'au scan du consommateur final.</p>
     <div class="roles-grid">
       <div class="role-col">
         <div class="role-head" style="background:#dcf5e2;color:#064e3b">
@@ -140,10 +140,10 @@ import { AuthService } from '../../services/auth.service';
           <li><span class="ck">&#10003;</span>Recherche publique par nom, GTIN, fournisseur ou lieu</li>
           <li><span class="ck">&#10003;</span>Page produit accessible sans compte via QR code</li>
           <li><span class="ck">&#10003;</span>Visualisation DAG de la supply chain (graph interactif)</li>
-          <li><span class="ck">&#10003;</span>Empreinte CO2 detaillee par etape de production</li>
-          <li><span class="ck">&#10003;</span>Type de chaque etape : matiere premiere, transport, fabrication...</li>
+          <li><span class="ck">&#10003;</span>Empreinte CO2 détaillée par étape de production</li>
+          <li><span class="ck">&#10003;</span>Type de chaque étape : matière première, transport, fabrication...</li>
           <li><span class="ck">&#10003;</span>Inscription consommateur et tableau de bord personnel</li>
-          <li><span class="ck">&#10003;</span>Historique de scans avec statistiques CO2 cumulees</li>
+          <li><span class="ck">&#10003;</span>Historique de scans avec statistiques CO2 cumulées</li>
           <li><span class="ck">&#10003;</span>GreenBot : chatbot RAG avec suggestions contextuelles</li>
         </ul>
       </div>
@@ -154,11 +154,11 @@ import { AuthService } from '../../services/auth.service';
         </div>
         <ul class="role-list">
           <li><span class="ck">&#10003;</span>Dashboard RSE : KPIs produits, etapes et CO2</li>
-          <li><span class="ck">&#10003;</span>Creation et edition de produits avec GTIN-14</li>
+          <li><span class="ck">&#10003;</span>Création et édition de produits avec GTIN-14</li>
           <li><span class="ck">&#10003;</span>Formulaire multi-etapes avec DAG de parallelisme</li>
           <li><span class="ck">&#10003;</span>Generation automatique de QR codes GS1 (PNG)</li>
-          <li><span class="ck">&#10003;</span>Vue detail produit par onglets (Infos, Etapes, Lots, Contributeurs)</li>
-          <li><span class="ck">&#10003;</span>Gestion des lots de production GS1 (SSCC, dates, quantites)</li>
+          <li><span class="ck">&#10003;</span>Vue détaillée produit par onglets (Infos, Etapes, Lots, Contributeurs)</li>
+          <li><span class="ck">&#10003;</span>Gestion des lots de production GS1 (SSCC, dates, quantités)</li>
           <li><span class="ck">&#10003;</span>Invitation de fournisseurs contributeurs par email</li>
           <li><span class="ck">&#10003;</span>Gestion des droits d acces par produit (scope read / write)</li>
           <li><span class="ck">&#10003;</span>GreenBot : chatbot RAG avec acces aux donnees produits</li>
@@ -171,12 +171,12 @@ import { AuthService } from '../../services/auth.service';
         </div>
         <ul class="role-list">
           <li><span class="ck">&#10003;</span>Panneau de gestion de tous les utilisateurs</li>
-          <li><span class="ck">&#10003;</span>Creation, edition et suppression de comptes</li>
+          <li><span class="ck">&#10003;</span>Création, édition et suppression de comptes</li>
           <li><span class="ck">&#10003;</span>Attribution des roles : admin, entreprise, consommateur</li>
           <li><span class="ck">&#10003;</span>Blocage de suppression de son propre compte</li>
           <li><span class="ck">&#10003;</span>Vue du nombre de produits par utilisateur</li>
-          <li><span class="ck">&#10003;</span>Acces a toutes les fonctionnalites entreprise</li>
-          <li><span class="ck">&#10003;</span>GreenBot avec acces etendu au corpus documentaire</li>
+          <li><span class="ck">&#10003;</span>Accès a toutes les fonctionnalités entreprise</li>
+          <li><span class="ck">&#10003;</span>GreenBot avec accès étendu au corpus documentaire</li>
         </ul>
       </div>
     </div>
@@ -207,12 +207,12 @@ import { AuthService } from '../../services/auth.service';
         <div class="pname">Pro</div>
         <div class="pdesc">Pour les PME avec plusieurs gammes</div>
         <ul class="pfeats">
-          <li class="ok"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Produits illimites</li>
-          <li class="ok"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>QR codes GS1 illimites</li>
-          <li class="ok"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Page publique personnalisee</li>
+          <li class="ok"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Produits illimités</li>
+          <li class="ok"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>QR codes GS1 illimités</li>
+          <li class="ok"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Page publique personnalisée</li>
           <li class="ok"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Calcul CO2 + rapport PDF</li>
           <li class="ok"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Multi-entreprises (5 partenaires)</li>
-          <li class="no"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>API et integrations ERP</li>
+          <li class="no"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>API et intégrations ERP</li>
         </ul>
         <a href="mailto:contact&#64;greenpath.fr?subject=Offre Pro" class="pbtn pfeatbtn">Demander un devis</a>
       </div>
@@ -220,8 +220,8 @@ import { AuthService } from '../../services/auth.service';
         <div class="pname">Enterprise</div>
         <div class="pdesc">Pour les grands groupes multi-sites</div>
         <ul class="pfeats">
-          <li class="ok"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Tout l offre Pro</li>
-          <li class="ok"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Partenaires illimites</li>
+          <li class="ok"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Tout l'offre Pro</li>
+          <li class="ok"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Partenaires illimités</li>
           <li class="ok"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>API REST complete + webhooks</li>
           <li class="ok"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Integration ERP / WMS</li>
           <li class="ok"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2da844" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>SSO et gestion des acces</li>
@@ -235,8 +235,8 @@ import { AuthService } from '../../services/auth.service';
 
 <section class="section bg-dark center">
   <div class="inner">
-    <h2 style="color:white">Pret a rendre votre supply chain transparente ?</h2>
-    <p style="color:rgba(255,255,255,0.7);margin-bottom:32px">Rejoignez les entreprises qui font de la tracabilite un avantage, pas une contrainte.</p>
+    <h2 style="color:white">Prêt à rendre votre supply chain transparente ?</h2>
+    <p style="color:rgba(255,255,255,0.7);margin-bottom:32px">Rejoignez les entreprises qui font de la tracabilité un avantage, pas une contrainte.</p>
     <div class="cta-btns">
       <a href="mailto:contact&#64;greenpath.fr?subject=Devis GreenPath" class="btn-primary">Demander une demo</a>
       <a routerLink="/search" class="btn-ghost">Explorer les produits</a>
