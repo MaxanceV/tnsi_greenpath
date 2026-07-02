@@ -15,6 +15,7 @@ import { AuthService } from '../../services/auth.service';
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
   template: `
     <div class="page">
+      <a routerLink="/" class="back-home">← Retour au site</a>
       <form class="card" [formGroup]="form" (ngSubmit)="submit()" novalidate>
         <img src="/assets/logo.jpeg" alt="GreenPath" class="logo" />
         <p class="subtitle">Connectez-vous à votre espace</p>
@@ -74,7 +75,22 @@ import { AuthService } from '../../services/auth.service';
         background: linear-gradient(135deg, #ecfdf5, #d1fae5);
         font-family: system-ui, -apple-system, sans-serif;
         padding: 20px;
+        position: relative;
       }
+      .back-home {
+        position: absolute;
+        top: 20px; left: 20px;
+        display: inline-flex; align-items: center;
+        background: white; color: #065f46;
+        border: 1px solid #a7f3d0;
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-size: 0.85rem; font-weight: 600;
+        text-decoration: none;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        transition: background 0.15s;
+      }
+      .back-home:hover { background: #ecfdf5; }
       .card {
         background: white;
         padding: 36px 32px;

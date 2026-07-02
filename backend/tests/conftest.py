@@ -105,6 +105,20 @@ def entreprise_user(db):
 
 
 @pytest.fixture
+def contributor_user(db):
+    user = models.User(
+        email="contributor@test.com",
+        password_hash=hash_password("contributor123"),
+        role="entreprise",
+        company_name="Fournisseur Test",
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@pytest.fixture
 def consumer_user(db):
     user = models.User(
         email="consumer@test.com",
@@ -137,6 +151,11 @@ def entreprise_token(client, entreprise_user):
 @pytest.fixture
 def consumer_token(client, consumer_user):
     return _login_token(client, "consumer@test.com", "conso123")
+
+
+@pytest.fixture
+def contributor_token(client, contributor_user):
+    return _login_token(client, "contributor@test.com", "contributor123")
 
 
 # ---------------------------------------------------------------- Helpers
