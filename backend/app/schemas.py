@@ -21,10 +21,14 @@ from typing import List, Optional
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from .services.co2 import STEP_BASE_FACTORS_KG_CO2_PER_KG, TRANSPORT_FACTORS_KG_CO2_PER_TKM
 from .services.gs1 import validate_gln, validate_gtin, validate_sscc
 
-ALLOWED_STEP_TYPES = {"matiere_premiere", "fabrication", "transport", "distribution"}
-ALLOWED_TRANSPORT_MODES = {"camion", "bateau", "avion", "train", "aucun"}
+# Source unique : un step_type/transport_mode n'est valide que s'il a un
+# facteur CO2 défini dans services/co2.py. Ajouter un type = ajouter une
+# entrée à un seul endroit (co2.py), sans risque de désynchronisation.
+ALLOWED_STEP_TYPES = set(STEP_BASE_FACTORS_KG_CO2_PER_KG)
+ALLOWED_TRANSPORT_MODES = set(TRANSPORT_FACTORS_KG_CO2_PER_TKM)
 ALLOWED_ROLES = {"admin", "entreprise", "consommateur"}
 ALLOWED_CONTRIBUTOR_SCOPES = {"read", "write"}
 
@@ -64,7 +68,10 @@ class StepBase(BaseModel):
 
 
 class StepCreate(StepBase):
-    pass
+    # Présent lors d'une mise à jour pour identifier une étape existante
+    # (permet de distinguer "cette étape m'appartient déjà" de "étape d'un
+    # tiers renvoyée telle quelle par le formulaire"). None = nouvelle étape.
+    id: Optional[int] = None
 
 
 class ContributorInfo(BaseModel):

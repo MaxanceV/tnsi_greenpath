@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..database import get_db
 from ..dependencies import get_current_user
+from ..services.authorization import has_write_access, is_owner_or_admin
 from ..services.blockchain import assign_hashes
 from ..services.co2 import total_co2_for_product
 from ..services.gs1 import generate_gtin
@@ -76,27 +77,19 @@ def _scoped_query(db: Session, user: models.User):
     )
 
 
-def _has_write_access(product: models.Product, user: models.User) -> bool:
-    """Retourne True si l'utilisateur peut écrire sur ce produit."""
-    if user.role == "admin":
-        return True
-    if product.owner_id == user.id:
-        return True
-    contrib = next(
-        (c for c in product.contributors if c.user_id == user.id and c.scope == "write"),
-        None,
-    )
-    return contrib is not None
-
-
 def _ensure_write_access(product: models.Product, user: models.User) -> None:
-    if not _has_write_access(product, user):
+    if not has_write_access(product, user):
         raise HTTPException(status_code=403, detail="Accès refusé à ce produit")
 
 
 def _build_step(step_data: schemas.StepCreate, contributor_id: int | None = None) -> models.Step:
-    """Construit un Step ORM depuis le payload Create, avec contributor_id optionnel."""
-    d = step_data.model_dump()
+    """Construit un nouveau Step ORM depuis le payload Create, avec contributor_id optionnel.
+
+    Toujours une nouvelle ligne : le champ `id` du payload (s'il est présent)
+    ne sert qu'à identifier une étape existante côté appelant, jamais à
+    forcer la clé primaire de la ligne créée ici.
+    """
+    d = step_data.model_dump(exclude={"id"})
     return models.Step(**d, contributor_id=contributor_id)
 
 
@@ -194,21 +187,28 @@ def update_product(
         product.gtin = payload.gtin
 
     if payload.steps is not None:
-        is_owner_or_admin = (user.role == "admin" or product.owner_id == user.id)
+        owner_or_admin = is_owner_or_admin(product, user)
 
-        if is_owner_or_admin:
+        if owner_or_admin:
             product.steps.clear()
             db.flush()
             for step in payload.steps:
                 product.steps.append(_build_step(step))
         else:
-            # Contributeur : conserver les étapes des autres
-            other_steps = [s for s in product.steps if s.contributor_id != user.id]
-            new_steps = [_build_step(step, contributor_id=user.id) for step in payload.steps]
-            product.steps.clear()
+            # Contributeur : le formulaire renvoie TOUTES les étapes du produit
+            # (les siennes + celles des autres, chargées en lecture). On ne
+            # doit recréer que les siennes : les étapes des autres présentes
+            # dans le payload sont ignorées (déjà conservées telles quelles),
+            # identifiées par leur id pour ne pas les dupliquer.
+            other_ids = {s.id for s in product.steps if s.contributor_id != user.id}
+            own_steps = [s for s in product.steps if s.contributor_id == user.id]
+            for s in own_steps:
+                product.steps.remove(s)
             db.flush()
-            for s in other_steps + new_steps:
-                product.steps.append(s)
+            for step in payload.steps:
+                if step.id is not None and step.id in other_ids:
+                    continue
+                product.steps.append(_build_step(step, contributor_id=user.id))
 
         db.flush()
         assign_hashes(product.steps)

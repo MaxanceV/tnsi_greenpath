@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..database import get_db
 from ..dependencies import get_current_user
+from ..services.authorization import is_owner_or_admin
 
 router = APIRouter(prefix="/products/{product_id}/contributors", tags=["contributors"])
 
@@ -34,9 +35,7 @@ def _get_product_or_404(product_id: int, db: Session) -> models.Product:
 
 def _ensure_owner_or_admin(product: models.Product, user: models.User) -> None:
     """Seul l'owner ou un admin peut gérer les contributeurs."""
-    if user.role == "admin":
-        return
-    if product.owner_id != user.id:
+    if not is_owner_or_admin(product, user):
         raise HTTPException(status_code=403, detail="Seul l'owner du produit peut gérer les contributeurs")
 
 

@@ -158,6 +158,7 @@ export class ProductFormComponent implements OnInit {
   }
 
   private buildStepGroup(values?: Partial<{
+    id: number | null;
     position: number;
     name: string;
     step_type: StepType;
@@ -171,6 +172,10 @@ export class ProductFormComponent implements OnInit {
     upstream_batch_id: number | null;
   }>): FormGroup {
     return this.fb.group({
+      // Identifie une étape déjà existante (chargée depuis le backend), pour
+      // que le contributeur puisse renvoyer les étapes des autres sans que
+      // le backend les recrée en double. null = nouvelle étape.
+      id: [values?.id ?? null],
       position: [
         values?.position ?? this.steps.length + 1,
         [Validators.required, Validators.min(1)],
@@ -255,6 +260,7 @@ export class ProductFormComponent implements OnInit {
       description: raw.description?.trim() || null,
       gtin: raw.gtin?.trim() || null,
       steps: raw.steps.map((s: any) => ({
+        id: s.id ?? undefined,
         position: s.position,
         name: s.name.trim(),
         step_type: s.step_type,

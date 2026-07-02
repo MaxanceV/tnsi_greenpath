@@ -34,6 +34,7 @@ import { ProductTimelineComponent } from '../product-timeline/product-timeline.c
     <div class="public-page">
       <header class="public-header">
         <div class="header-inner">
+          <a routerLink="/" class="back-home">← Accueil</a>
           <img src="/assets/logo.jpeg" alt="GreenPath" class="logo" />
         </div>
       </header>
@@ -187,10 +188,26 @@ import { ProductTimelineComponent } from '../product-timeline/product-timeline.c
         padding: 14px 0;
       }
       .header-inner {
+        position: relative;
         max-width: 1080px; margin: 0 auto;
         padding: 0 20px;
         display: flex; align-items: center; justify-content: center;
       }
+      .back-home {
+        position: absolute;
+        left: 20px; top: 50%;
+        transform: translateY(-50%);
+        display: inline-flex; align-items: center;
+        background: white; color: #065f46;
+        border: 1px solid #a7f3d0;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 0.82rem; font-weight: 600;
+        text-decoration: none;
+        white-space: nowrap;
+        transition: background 0.15s;
+      }
+      .back-home:hover { background: #ecfdf5; }
       .logo {
         height: 52px; width: auto;
         mix-blend-mode: multiply;

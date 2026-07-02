@@ -22,23 +22,10 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..database import get_db
 from ..dependencies import get_current_user
+from ..services.authorization import has_write_access
 from ..services.gs1 import generate_sscc
 
 router = APIRouter(prefix="/batches", tags=["batches"])
-
-
-def _can_write_batch(product: models.Product, user: models.User) -> bool:
-    """Vérifie que l'utilisateur peut créer/modifier des lots sur ce produit."""
-    if user.role == "admin":
-        return True
-    if product.owner_id == user.id:
-        return True
-    # Contributeur avec scope write
-    contrib = next(
-        (c for c in product.contributors if c.user_id == user.id and c.scope == "write"),
-        None,
-    )
-    return contrib is not None
 
 
 def _batch_to_read(batch: models.Batch) -> schemas.BatchRead:
@@ -94,7 +81,7 @@ def create_batch(
     product = db.query(models.Product).filter(models.Product.id == payload.product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Produit introuvable")
-    if not _can_write_batch(product, user):
+    if not has_write_access(product, user):
         raise HTTPException(status_code=403, detail="Accès refusé à ce produit")
 
     # Vérifier unicité du lot_number par produit
@@ -177,7 +164,7 @@ def get_batch(
     if not batch:
         raise HTTPException(status_code=404, detail="Lot introuvable")
     product = batch.product
-    if not _can_write_batch(product, user) and user.role != "admin":
+    if not has_write_access(product, user) and user.role != "admin":
         raise HTTPException(status_code=403, detail="Accès refusé")
     return _batch_to_read(batch)
 
@@ -192,7 +179,7 @@ def update_batch(
     batch = db.query(models.Batch).filter(models.Batch.id == batch_id).first()
     if not batch:
         raise HTTPException(status_code=404, detail="Lot introuvable")
-    if not _can_write_batch(batch.product, user):
+    if not has_write_access(batch.product, user):
         raise HTTPException(status_code=403, detail="Accès refusé")
 
     batch.lot_number = payload.lot_number
@@ -224,7 +211,7 @@ def delete_batch(
     batch = db.query(models.Batch).filter(models.Batch.id == batch_id).first()
     if not batch:
         raise HTTPException(status_code=404, detail="Lot introuvable")
-    if not _can_write_batch(batch.product, user):
+    if not has_write_access(batch.product, user):
         raise HTTPException(status_code=403, detail="Accès refusé")
     db.delete(batch)
     db.commit()
